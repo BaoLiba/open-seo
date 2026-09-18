@@ -1,6 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "open-seo",
+  "vars": {
+    "AUTH_MODE": "cloudflare_access",
+    "TEAM_DOMAIN": "https://baoliba.cloudflareaccess.com",
+    "POLICY_AUD": "bab23b6af77d49e4ee742b25160675b19c2c3a19aea88b8ee12b3a9f51d271f0"
+  },
   "main": "src/server.ts",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
