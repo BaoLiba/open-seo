@@ -19,7 +19,6 @@ import { Route as ProjectRouteRouteImport } from './routes/_project/route'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as RReportIdRouteImport } from './routes/r/$reportId'
-import { Route as MockupsSignupRouteImport } from './routes/mockups.signup'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
@@ -37,6 +36,7 @@ import { Route as STokenIndexRouteImport } from './routes/s/$token/index'
 import { Route as AuthenticatedOnboardingIndexRouteImport } from './routes/_authenticated.onboarding.index'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as STokenRawRouteImport } from './routes/s/$token/raw'
+import { Route as STokenOgDotpngRouteImport } from './routes/s/$token/og[.]png'
 import { Route as ApiAutumnSplatRouteImport } from './routes/api/autumn/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AppSettingsOrganizationRouteImport } from './routes/_app/settings/organization'
@@ -113,11 +113,6 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const RReportIdRoute = RReportIdRouteImport.update({
   id: '/r/$reportId',
   path: '/r/$reportId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MockupsSignupRoute = MockupsSignupRouteImport.update({
-  id: '/mockups/signup',
-  path: '/mockups/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -206,6 +201,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
 const STokenRawRoute = STokenRawRouteImport.update({
   id: '/s/$token/raw',
   path: '/s/$token/raw',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const STokenOgDotpngRoute = STokenOgDotpngRouteImport.update({
+  id: '/s/$token/og.png',
+  path: '/s/$token/og.png',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAutumnSplatRoute = ApiAutumnSplatRouteImport.update({
@@ -401,7 +401,6 @@ export interface FileRoutesByFullPath {
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/health': typeof ApiHealthRoute
-  '/mockups/signup': typeof MockupsSignupRoute
   '/r/$reportId': typeof RReportIdRoute
   '/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
@@ -409,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/autumn/$': typeof ApiAutumnSplatRoute
+  '/s/$token/og.png': typeof STokenOgDotpngRoute
   '/s/$token/raw': typeof STokenRawRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/onboarding/': typeof AuthenticatedOnboardingIndexRoute
@@ -457,13 +457,13 @@ export interface FileRoutesByTo {
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/health': typeof ApiHealthRoute
-  '/mockups/signup': typeof MockupsSignupRoute
   '/r/$reportId': typeof RReportIdRoute
   '/help/dataforseo-api-key': typeof AppHelpDataforseoApiKeyRoute
   '/help/openrouter-api-key': typeof AppHelpOpenrouterApiKeyRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/autumn/$': typeof ApiAutumnSplatRoute
+  '/s/$token/og.png': typeof STokenOgDotpngRoute
   '/s/$token/raw': typeof STokenRawRoute
   '/settings': typeof AppSettingsIndexRoute
   '/onboarding': typeof AuthenticatedOnboardingIndexRoute
@@ -514,7 +514,6 @@ export interface FileRoutesById {
   '/_authenticated/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/api/health': typeof ApiHealthRoute
-  '/mockups/signup': typeof MockupsSignupRoute
   '/r/$reportId': typeof RReportIdRoute
   '/_app/': typeof AppIndexRoute
   '/_project/p/$projectId': typeof ProjectPProjectIdRouteRouteWithChildren
@@ -523,6 +522,7 @@ export interface FileRoutesById {
   '/_app/settings/organization': typeof AppSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/autumn/$': typeof ApiAutumnSplatRoute
+  '/s/$token/og.png': typeof STokenOgDotpngRoute
   '/s/$token/raw': typeof STokenRawRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_authenticated/onboarding/': typeof AuthenticatedOnboardingIndexRoute
@@ -574,7 +574,6 @@ export interface FileRouteTypes {
     | '/subscribe'
     | '/accept-invitation/$id'
     | '/api/health'
-    | '/mockups/signup'
     | '/r/$reportId'
     | '/p/$projectId'
     | '/help/dataforseo-api-key'
@@ -582,6 +581,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/api/auth/$'
     | '/api/autumn/$'
+    | '/s/$token/og.png'
     | '/s/$token/raw'
     | '/settings/'
     | '/onboarding/'
@@ -630,13 +630,13 @@ export interface FileRouteTypes {
     | '/subscribe'
     | '/accept-invitation/$id'
     | '/api/health'
-    | '/mockups/signup'
     | '/r/$reportId'
     | '/help/dataforseo-api-key'
     | '/help/openrouter-api-key'
     | '/settings/organization'
     | '/api/auth/$'
     | '/api/autumn/$'
+    | '/s/$token/og.png'
     | '/s/$token/raw'
     | '/settings'
     | '/onboarding'
@@ -686,7 +686,6 @@ export interface FileRouteTypes {
     | '/_authenticated/subscribe'
     | '/accept-invitation/$id'
     | '/api/health'
-    | '/mockups/signup'
     | '/r/$reportId'
     | '/_app/'
     | '/_project/p/$projectId'
@@ -695,6 +694,7 @@ export interface FileRouteTypes {
     | '/_app/settings/organization'
     | '/api/auth/$'
     | '/api/autumn/$'
+    | '/s/$token/og.png'
     | '/s/$token/raw'
     | '/_app/settings/'
     | '/_authenticated/onboarding/'
@@ -738,10 +738,10 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  MockupsSignupRoute: typeof MockupsSignupRoute
   RReportIdRoute: typeof RReportIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAutumnSplatRoute: typeof ApiAutumnSplatRoute
+  STokenOgDotpngRoute: typeof STokenOgDotpngRoute
   STokenRawRoute: typeof STokenRawRoute
   STokenIndexRoute: typeof STokenIndexRoute
   ApiGa4OauthCallbackRoute: typeof ApiGa4OauthCallbackRoute
@@ -818,13 +818,6 @@ declare module '@tanstack/react-router' {
       path: '/r/$reportId'
       fullPath: '/r/$reportId'
       preLoaderRoute: typeof RReportIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mockups/signup': {
-      id: '/mockups/signup'
-      path: '/mockups/signup'
-      fullPath: '/mockups/signup'
-      preLoaderRoute: typeof MockupsSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -944,6 +937,13 @@ declare module '@tanstack/react-router' {
       path: '/s/$token/raw'
       fullPath: '/s/$token/raw'
       preLoaderRoute: typeof STokenRawRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$token/og.png': {
+      id: '/s/$token/og.png'
+      path: '/s/$token/og.png'
+      fullPath: '/s/$token/og.png'
+      preLoaderRoute: typeof STokenOgDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/autumn/$': {
@@ -1364,10 +1364,10 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,
   AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   ApiHealthRoute: ApiHealthRoute,
-  MockupsSignupRoute: MockupsSignupRoute,
   RReportIdRoute: RReportIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAutumnSplatRoute: ApiAutumnSplatRoute,
+  STokenOgDotpngRoute: STokenOgDotpngRoute,
   STokenRawRoute: STokenRawRoute,
   STokenIndexRoute: STokenIndexRoute,
   ApiGa4OauthCallbackRoute: ApiGa4OauthCallbackRoute,
