@@ -38,6 +38,7 @@ export interface RankTrackingRow {
   trackingKeywordId: string;
   keyword: string;
   matchCase: boolean;
+  pinned: boolean;
   searchVolume: number | null;
   keywordDifficulty: number | null;
   cpc: number | null;
@@ -159,6 +160,13 @@ export const removeKeywordsSchema = z.object({
   projectId: z.string().uuid(),
   configId: z.string().uuid(),
   keywordIds: z.array(z.string().uuid()).min(1).max(2000),
+});
+
+export const setKeywordsPinnedSchema = z.object({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  keywordIds: z.array(z.string().uuid()).min(1).max(2000),
+  pinned: z.boolean(),
 });
 
 export const refreshMetricsSchema = z.object({

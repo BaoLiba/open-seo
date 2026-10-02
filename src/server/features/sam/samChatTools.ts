@@ -13,6 +13,7 @@ import { createRankTrackerTool } from "@/server/mcp/tools/create-rank-tracker";
 import { estimateRankTrackerCostTool } from "@/server/mcp/tools/estimate-rank-tracker-cost";
 import { getRankTrackerTool } from "@/server/mcp/tools/get-rank-tracker";
 import { removeRankTrackingKeywordsTool } from "@/server/mcp/tools/remove-rank-tracking-keywords";
+import { pinRankTrackingKeywordsTool } from "@/server/mcp/tools/pin-rank-tracking-keywords";
 import { runRankTrackerTool } from "@/server/mcp/tools/run-rank-tracker";
 import { searchSerpLocationsTool } from "@/server/mcp/tools/search-serp-locations";
 import { getSerpResultsTool } from "@/server/mcp/tools/get-serp-results";
@@ -377,6 +378,7 @@ export function buildSamMcpTools(
     get_rank_tracker: adaptTool(getRankTrackerTool),
     add_rank_tracking_keywords: adaptTool(addRankTrackingKeywordsTool),
     remove_rank_tracking_keywords: adaptTool(removeRankTrackingKeywordsTool),
+    pin_rank_tracking_keywords: adaptTool(pinRankTrackingKeywordsTool),
     estimate_rank_tracker_cost: adaptTool(estimateRankTrackerCostTool),
     run_rank_tracker: adaptTool(runRankTrackerTool),
     get_ranked_keywords: adaptTool(getRankedKeywordsTool),

@@ -27,6 +27,10 @@ const RANK_RESULT_COLUMNS: McpTableColumn<unknown>[] = [
     header: "prev (mobile)",
     value: (row) => readPath(row, "mobile", "previousPosition"),
   },
+  {
+    header: "pinned",
+    value: (row) => (readPath(row, "pinned") === true ? "yes" : "no"),
+  },
   { header: "google serp", value: (row) => readPath(row, "googleSerpUrl") },
 ];
 
@@ -69,7 +73,7 @@ export const getRankTrackerTool = {
   config: {
     title: "Get rank tracker",
     description:
-      "Read-only access to rank tracker configs and their latest results. With `trackerId`, returns config + latest snapshot per keyword, including `trackingKeywordId` for removals and `googleSerpUrl`, a live Google search for the tracked keyword, language, country, and city. Without it, lists all trackers in the project. Uses no credits. Use create_rank_tracker when no tracker exists; then use add_rank_tracking_keywords, remove_rank_tracking_keywords, estimate_rank_tracker_cost, or run_rank_tracker to manage it. `lastCheckedAt` shows position freshness.",
+      "Read-only access to rank tracker configs and their latest results. With `trackerId`, returns config + latest snapshot per keyword, including `trackingKeywordId` for removals and pins, `pinned` (pinned keywords are listed first), and `googleSerpUrl`, a live Google search for the tracked keyword, language, country, and city. Without it, lists all trackers in the project. Uses no credits. Use create_rank_tracker when no tracker exists; then use add_rank_tracking_keywords, remove_rank_tracking_keywords, pin_rank_tracking_keywords, estimate_rank_tracker_cost, or run_rank_tracker to manage it. `lastCheckedAt` shows position freshness.",
     inputSchema,
     outputSchema: z
       .object({
@@ -130,10 +134,15 @@ export const getRankTrackerTool = {
       args.trackerId,
       args.projectId,
     );
-    const rows = results.rows.map((row) => ({
+    const allRows = results.rows.map((row) => ({
       ...row,
       googleSerpUrl: googleSerpUrl(row.keyword, config),
     }));
+    // Pinned keywords first, as in the app's keyword table.
+    const rows = [
+      ...allRows.filter((row) => row.pinned),
+      ...allRows.filter((row) => !row.pinned),
+    ];
     const text = [
       `Tracker ${config.id} (${config.domain}${config.locationName ? `, ${config.locationName}` : ""}):`,
       `Schedule: ${config.scheduleInterval}, devices: ${config.devices}, depth: ${config.serpDepth}`,

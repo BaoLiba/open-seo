@@ -269,6 +269,9 @@ export const rankTrackingKeywords = sqliteTable(
     keywordDifficulty: integer("keyword_difficulty"),
     cpc: real("cpc"),
     metricsFetchedAt: text("metrics_fetched_at"),
+    // Set when a user pins the keyword to the top of the tracker's table.
+    // Pins are shared by everyone in the project.
+    pinnedAt: text("pinned_at"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(current_timestamp)`),

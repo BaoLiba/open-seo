@@ -13,7 +13,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { SortingState } from "@tanstack/react-table";
 import { removeTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
-import { useRankTrackingColumns } from "./RankTrackingColumns";
+import {
+  PINNED_COLUMN_ID,
+  useRankTrackingColumns,
+} from "./RankTrackingColumns";
+import { useSetKeywordPinned } from "./useSetKeywordPinned";
 import { exportRankTracking } from "./RankTrackingTableParts";
 import {
   KeywordTrendModal,
@@ -70,22 +74,32 @@ export function RankTrackingTable({
     [],
   );
 
+  const setKeywordPinned = useSetKeywordPinned(projectId, configId);
   const columns = useRankTrackingColumns({
     showDesktop,
     showMobile,
     domain,
     selectAnchorRef,
     onKeywordClick: handleKeywordClick,
+    onSetPinned: setKeywordPinned,
     locationName,
   });
 
+  // The pinned column sorts first and stays out of the sorting the page owns.
+  const tableSorting = [{ id: PINNED_COLUMN_ID, desc: false }, ...sorting];
   const table = useDataTable({
     data: rows,
     columns,
-    state: { sorting },
+    state: {
+      sorting: tableSorting,
+      columnVisibility: { [PINNED_COLUMN_ID]: false },
+    },
     onSortingChange: (updater) =>
       onSortingChange(
-        typeof updater === "function" ? updater(sorting) : updater,
+        (typeof updater === "function"
+          ? updater(tableSorting)
+          : updater
+        ).filter((sort) => sort.id !== PINNED_COLUMN_ID),
       ),
     // The URL has no value for "unsorted", so a column stays sorted.
     enableSortingRemoval: false,
