@@ -1,7 +1,7 @@
 ---
 title: "The Best Open Source SEO Tools in 2026"
 description: "Open source SEO tools in 2026: OpenSEO, SerpBear, SEONaut, LibreCrawl, and SEOMachine — what each one does, what it costs to run, and how to self-host."
-author: "OpenSEO Team"
+author: "Ben Senescu"
 date: "2026-06-05"
 ---
 
