@@ -32,6 +32,7 @@ export function RankTrackingTable({
   configId,
   projectId,
   locationCode,
+  languageCode,
   locationName,
   serpDepth,
   onAddKeywords,
@@ -47,6 +48,7 @@ export function RankTrackingTable({
   configId: string;
   projectId: string;
   locationCode: number;
+  languageCode: string;
   locationName?: string | null;
   serpDepth: number;
   onAddKeywords: () => void;
@@ -180,6 +182,7 @@ export function RankTrackingTable({
           configId={configId}
           domain={domain}
           locationCode={locationCode}
+          languageCode={languageCode}
           locationName={locationName ?? undefined}
           serpDepth={serpDepth}
           onClose={() => setTrendTarget(null)}
