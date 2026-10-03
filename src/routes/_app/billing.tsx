@@ -69,6 +69,7 @@ function BillingPage() {
     totalRemaining,
     isOutOfCredits,
     isLowCredits,
+    refillDate,
   } = useCreditBalance({
     // Expanded so the plan card can show the subscribed plan's name.
     expand: ["subscriptions.plan"],
@@ -192,10 +193,13 @@ function BillingPage() {
               ) : null}
               {isOutOfCredits ? (
                 <p className="mt-2 text-xs text-destructive">
-                  You&rsquo;ve used all your credits.{" "}
                   {isFreePlan
-                    ? "Upgrade your plan to continue."
-                    : "Buy more credits below to continue."}
+                    ? "You’ve used your free credits. Upgrade your plan to continue."
+                    : `You’ve used this month’s credits. Buy more below to keep going${
+                        refillDate
+                          ? `, or wait for them to refill on ${refillDate}`
+                          : ""
+                      }.`}
                 </p>
               ) : isLowCredits ? (
                 <p className="mt-2 text-xs text-amber-600">

@@ -1,6 +1,9 @@
 import { useCustomer } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
-import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
+import {
+  getCustomerPaidPlanId,
+  getCustomerPlanStatus,
+} from "@/client/features/billing/plan-detection";
 import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
@@ -22,24 +25,39 @@ export function useCreditBalance({
     },
   });
 
-  const balances = customerQuery.data?.balances;
+  const customer = customerQuery.data;
+  const balances = customer?.balances;
+  const monthlyBalance = balances?.[AUTUMN_SEO_DATA_BALANCE_FEATURE_ID];
   const monthlyRemaining = autumnSeoDataCreditsToUsd(
-    balances?.[AUTUMN_SEO_DATA_BALANCE_FEATURE_ID]?.remaining ?? 0,
+    monthlyBalance?.remaining ?? 0,
   );
   const topUpRemaining = autumnSeoDataCreditsToUsd(
     balances?.[AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID]?.remaining ?? 0,
   );
   const totalRemaining = monthlyRemaining + topUpRemaining;
+  // A paid plan canceled at period end ends then instead of refilling.
+  const paidSubscription = customer?.subscriptions?.find(
+    (subscription) => subscription.planId === getCustomerPaidPlanId(customer),
+  );
   const isOutOfCredits = totalRemaining <= 0;
 
   return {
     session,
     customerQuery,
-    isFreePlan: getCustomerPlanStatus(customerQuery.data) === "free",
+    isFreePlan: getCustomerPlanStatus(customer) === "free",
     monthlyRemaining,
     topUpRemaining,
     totalRemaining,
     isOutOfCredits,
     isLowCredits: !isOutOfCredits && totalRemaining < LOW_CREDITS_THRESHOLD_USD,
+    // When monthly credits refill, e.g. "Oct 12". Null for the free plan's
+    // one-time credits and for a canceled plan, which never refill.
+    refillDate:
+      monthlyBalance?.nextResetAt && !paidSubscription?.canceledAt
+        ? new Date(monthlyBalance.nextResetAt).toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })
+        : null,
   };
 }
