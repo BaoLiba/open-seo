@@ -23,11 +23,11 @@ export function InsufficientCreditsError({
   variant?: "inline" | "card" | "page";
   title?: string;
 }) {
-  const { customerQuery, isFreePlan, refillDate } = useCreditBalance();
+  const { accountQuery, isFreePlan, refillDate } = useCreditBalance();
 
   let message: string;
   let action: ReactElement;
-  if (!customerQuery.data) {
+  if (!accountQuery.data) {
     message = getStandardErrorMessage(new Error("INSUFFICIENT_CREDITS"));
     action = (
       <CreditsButton link={<Link to={BILLING_ROUTE} />} label="Go to Billing" />

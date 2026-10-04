@@ -6,16 +6,11 @@ import { useCanManageBilling } from "@/client/features/team/organizationQueries"
 import { BILLING_ROUTE, SUBSCRIBE_ROUTE } from "@/shared/billing";
 
 export function FreePlanBanner() {
-  const {
-    customerQuery,
-    isFreePlan,
-    isOutOfCredits,
-    isLowCredits,
-    refillDate,
-  } = useCreditBalance();
+  const { accountQuery, isFreePlan, isOutOfCredits, isLowCredits, refillDate } =
+    useCreditBalance();
   const canManageBilling = useCanManageBilling();
 
-  if (customerQuery.isLoading || !customerQuery.data) {
+  if (!accountQuery.data) {
     return null;
   }
 
