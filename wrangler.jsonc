@@ -104,7 +104,7 @@
   },
   // This config serves local dev and Docker self-host only. All Cloudflare
   // deployments — previews, prod, self-host — go through Alchemy
-  // (alchemy.run.ts), which provisions real resources per stage and never
+  // (deploy/alchemy/alchemy.run.ts), which provisions real resources per stage and never
   // reads these ids.
   //
   // The ids below are NOT dead config: miniflare derives its on-disk storage
@@ -126,7 +126,7 @@
       "binding": "DB",
       "database_name": "open-seo",
       "database_id": "45f719ab-1937-44ec-9b7f-88bdde9894b5",
-      "migrations_dir": "drizzle",
+      "migrations_dir": "drizzle/sqlite",
     },
   ],
   // Postgres scale path (opt-in; D1 is the default). Hyperdrive is the ONLY way
