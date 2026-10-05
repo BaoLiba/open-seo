@@ -139,6 +139,15 @@ export async function getUsageCreditsRemaining(customerId: string): Promise<{
     );
   }
 
+  // A missing optional top-up denies access; allowed with no balance is the
+  // SDK's fail-open response, so the total is unknown rather than base-only.
+  if (topupCheck.allowed && !topupCheck.balance) {
+    throw new AppError(
+      "INTERNAL_ERROR",
+      `Autumn check returned no ${AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID} balance for customer ${customerId}`,
+    );
+  }
+
   return {
     monthlyRemaining: monthlyBalance.remaining,
     topupRemaining: topupCheck.balance?.remaining ?? 0,
