@@ -35,6 +35,8 @@ const MAX_ANCHOR_CHARS = 200;
  */
 const MAX_EXTRACTED_LINKS = 1_000;
 const MAX_EXTRACTED_IMAGES = 1_000;
+// Common app entry points. Scripts alone also appear on ordinary HTML pages.
+const APP_ROOT_IDS = new Set(["root", "app", "__next", "__nuxt"]);
 
 interface OpenAnchor {
   href: string;
@@ -65,6 +67,8 @@ export function analyzeHtml(
   let ogDescription: string | null = null;
   let ogImage: string | null = null;
   let hasStructuredData = false;
+  let hasAppRoot = false;
+  let hasExecutableScript = false;
   const hreflangTags: string[] = [];
 
   const h1s: string[] = [];
@@ -136,6 +140,9 @@ export function analyzeHtml(
         }
         if (name === "noscript") noscriptDepth += 1;
         if (noscriptDepth > 0) return;
+        if (headDepth === 0 && suppressDepth === 0) {
+          hasAppRoot ||= APP_ROOT_IDS.has(attribs["id"]) || name === "app-root";
+        }
         switch (name) {
           case "title":
             // Ignore <title> inside <svg> — only the document title counts.
@@ -166,6 +173,12 @@ export function analyzeHtml(
             }
             break;
           case "script":
+            hasExecutableScript ||= [
+              "",
+              "module",
+              "text/javascript",
+              "application/javascript",
+            ].includes(attribs["type"]?.toLowerCase() ?? "");
             if (attribs["type"] === "application/ld+json") {
               hasStructuredData = true;
             }
@@ -253,6 +266,13 @@ export function analyzeHtml(
     headingOrder,
     wordCount,
     bodyText,
+    javascriptShell:
+      hasAppRoot &&
+      hasExecutableScript &&
+      wordCount < 20 &&
+      headingOrder.length === 0 &&
+      linksByTarget.size === 0 &&
+      images.length === 0,
     images,
     links: Array.from(linksByTarget.values()),
     hasStructuredData,
