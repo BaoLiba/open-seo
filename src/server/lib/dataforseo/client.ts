@@ -48,6 +48,7 @@ import {
   fetchLiveSerp,
   fetchLocalSerp,
   fetchRankCheckSerp,
+  postLocalSerpTasks,
   postRankCheckTasks,
 } from "@/server/lib/dataforseo/serp";
 import { fetchLighthouseResult } from "@/server/lib/dataforseo/lighthouse";
@@ -226,6 +227,14 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
         customer,
         fetchLocalSerp,
         dataforseoPricing.serp.local,
+        "local_seo",
+      ),
+      // One queued Maps task per rank grid point; one metered charge covers
+      // them all (DataForSEO bills task_post, collection is free).
+      localTaskPost: meter(
+        customer,
+        postLocalSerpTasks,
+        dataforseoPricing.serp.localTaskPost,
         "local_seo",
       ),
     },

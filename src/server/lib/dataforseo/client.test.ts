@@ -88,6 +88,7 @@ vi.mock("@/server/lib/dataforseo/serp", () => ({
   fetchRankCheckSerp: vi.fn(),
   postRankCheckTasks: vi.fn(),
   fetchLocalSerp: vi.fn(),
+  postLocalSerpTasks: vi.fn(),
   clampSerpDepth: (depth: number) => depth,
   SERP_ANALYSIS_DEPTH: 20,
 }));

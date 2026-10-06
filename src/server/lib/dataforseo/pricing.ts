@@ -32,6 +32,7 @@ import {
   fetchLiveSerp,
   fetchLocalSerp,
   fetchRankCheckSerp,
+  postLocalSerpTasks,
   postRankCheckTasks,
   SERP_ANALYSIS_DEPTH,
 } from "@/server/lib/dataforseo/serp";
@@ -131,6 +132,9 @@ const LLM_RESPONSE_USD: Record<
 // more. Local Finder bills every page of 10 at the first-page rate ($0.02 at
 // depth 100).
 const LOCAL_SERP_PAGE_USD = 0.002;
+// SERP Google Maps, queued at high priority. measured: task_post bills $0.0012
+// per task at depth 20.
+const LOCAL_SERP_TASK_USD = 0.0012;
 
 type ProviderUsdEstimator<I> = (input: I) => number;
 
@@ -252,6 +256,10 @@ export const dataforseoPricing = {
       input.searchType === "maps"
         ? LOCAL_SERP_PAGE_USD
         : Math.ceil(input.depth / 10) * LOCAL_SERP_PAGE_USD,
+    ),
+    localTaskPost: priced(
+      postLocalSerpTasks,
+      (input) => input.locationCoordinates.length * LOCAL_SERP_TASK_USD,
     ),
   },
   labs: {
