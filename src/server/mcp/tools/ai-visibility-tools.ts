@@ -167,7 +167,7 @@ export const completeAiResearchSetupTool = defineAiTool({
   readOnly: false,
   path: "research",
   description:
-    "Give a project with a saved website its Prompt Research keywords. Get the user's approval first: unless keywords exist, this starts paid research with usage credits. Starting is idempotent: a running or reviewable setup is returned, not restarted. With a business overview and competitors in shared context, one model call writes the keywords and, when the project has no tracking yet, seeds three paused tracker topics with five prompts each. Missing overview and competitors are researched independently; saved values are reused. Status becomes review when basics or competitors were researched: review new competitors, or preserve the saved list when preserveCompetitors=true, then save with save_project_website_setup. While status is running, call again after about 20 seconds. Never starts answer collection.",
+    "Give a project with a saved website its Prompt Research keywords. Get the user's approval first: unless keywords exist, this starts paid research with usage credits. Starting is idempotent: a running or reviewable setup is returned, not restarted. With a business overview and competitors in shared context, one model call writes the keywords and, when the project has no tracking yet, seeds three tracker topics with five prompts each, scheduled weekly with the first check about a week later. Missing overview and competitors are researched independently; saved values are reused. Status becomes review when basics or competitors were researched: review new competitors, or preserve the saved list when preserveCompetitors=true, then save with save_project_website_setup. While status is running, call again after about 20 seconds. Never starts answer collection.",
   execute: (s, a, b) => s.startResearchSetup(a, b),
   summarize: (d) =>
     d.status === "ready"
@@ -218,7 +218,7 @@ export const saveAiVisibilityTrackerTool = defineAiTool({
   }),
   readOnly: false,
   description:
-    "Bulk create or patch AI tracking prompts, their topics, engines, country, and language. Pause or archive a topic by pausing or archiving each of its prompts. Brand name/domain and competitors come from shared Project context; manage them there. Read the tracker first and edit prompts by ID. New trackers start paused and saving uses no collection credits. When tracking is enabled, show the user the new estimate before adding prompts or engines. Do not rewrite customer prompts without direction.",
+    "Bulk create or patch AI tracking prompts, their topics, engines, country, and language. Pause or archive a topic by pausing or archiving each of its prompts. Brand name/domain and competitors come from shared Project context; manage them there. Read the tracker first and edit prompts by ID. New trackers start on a weekly schedule; saving uses no credits, and the first paid check runs about a week later. Show the user the estimate before creating a tracker or adding prompts or engines, and pause with set_ai_visibility_schedule if they do not want scheduled checks. Do not rewrite customer prompts without direction.",
   execute: (s, a) => s.saveTracker(a),
   summarize: (d) =>
     `Saved AI tracking: ${d.created} created, ${d.updated} updated, ${d.skipped} skipped.`,

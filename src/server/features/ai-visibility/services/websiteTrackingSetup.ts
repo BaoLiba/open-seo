@@ -6,7 +6,7 @@ import { DEFAULT_LOCATION_CODE } from "@/shared/keyword-locations";
 import type { SaveProjectWebsiteSetup } from "@/types/schemas/projectWebsite";
 import { AppError } from "@/server/lib/errors";
 
-/** Seeds paused tracking from website setup's first three suggested topics. */
+/** Seeds weekly tracking from website setup's first three suggested topics. */
 export async function prepareWebsiteTracking(
   input: Pick<SaveProjectWebsiteSetup, "projectId" | "suggestedTopics">,
   market: { locationCode: number; languageCode: string },

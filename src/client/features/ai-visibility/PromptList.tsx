@@ -105,6 +105,7 @@ export function PromptList({
         engines={state.engines}
         rows={results.data}
         loading={results.isLoading}
+        scheduled={Boolean(state.tracker?.enabled)}
         pending={reducePending}
         onEdit={onEdit}
         onReduce={onReduce}

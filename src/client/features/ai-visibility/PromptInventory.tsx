@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  Archive,
-  ChevronDown,
-  ChevronRight,
-  Pause,
-  Pencil,
-  Play,
-} from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   AI_ENGINE_LABELS,
   aiNoAnswerLabel,
@@ -15,6 +8,7 @@ import {
   type AiObservationRow,
   type AiPrompt,
 } from "@/shared/ai-visibility";
+import { ConfirmDialog } from "@/client/components/ConfirmDialog";
 import { Button } from "@/client/components/ui/button";
 import { Skeleton } from "@/client/components/ui/skeleton";
 import {
@@ -26,6 +20,7 @@ import {
   TableRow,
 } from "@/client/components/ui/table";
 import { EngineLabel } from "./EngineLabel";
+import { PromptActionsMenu } from "./PromptActions";
 import { aiRate } from "./shared";
 import type { AiTrackerPatch } from "@/types/schemas/ai-visibility";
 
@@ -37,6 +32,7 @@ export function PromptInventory({
   engines,
   rows,
   loading,
+  scheduled,
   pending,
   onEdit,
   onReduce,
@@ -51,12 +47,19 @@ export function PromptInventory({
   rows: AiObservationRow[] | undefined;
   /** The run's answers are still loading; prompts show before their rates. */
   loading: boolean;
+  /** Whether the tracker has a schedule; pausing only skips scheduled runs. */
+  scheduled: boolean;
   pending: boolean;
   onEdit: (prompt: AiPrompt) => void;
   onReduce: (patch: AiTrackerPatch) => void;
   onReview: (patch: AiTrackerPatch, description: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  const [archiving, setArchiving] = useState<{
+    kind: "prompt" | "topic";
+    name: string;
+    promptIds: string[];
+  } | null>(null);
   const matches = (prompt: AiPrompt) =>
     !search ||
     prompt.text.toLocaleLowerCase().includes(search.toLocaleLowerCase());
@@ -67,223 +70,209 @@ export function PromptInventory({
       </p>
     );
   return (
-    <Table className="min-w-[900px]">
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-full">Prompts by topic</TableHead>
-          <TableHead>Engines</TableHead>
-          <TableHead>Brand mentions</TableHead>
-          <TableHead>Owned citations</TableHead>
-          <TableHead>
-            <span className="sr-only">Manage tracking</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      {topics.map((topic) => {
-        const topicPrompts = prompts.filter((prompt) => prompt.topic === topic);
-        const shownPrompts = topicPrompts.filter(matches);
-        if (!shownPrompts.length) return null;
-        const paused = topicPrompts.every((prompt) => prompt.paused);
-        const topicRows = rows?.filter((row) =>
-          shownPrompts.some((prompt) => prompt.id === row.promptId),
-        );
-        const open = !collapsed.includes(topic);
-        return (
-          <TableBody key={topic}>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableCell colSpan={2} className="py-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex h-auto items-center justify-start gap-2 px-0 text-left hover:bg-transparent aria-expanded:bg-transparent"
-                  aria-expanded={open}
-                  onClick={() =>
-                    setCollapsed((names) =>
-                      open
-                        ? [...names, topic]
-                        : names.filter((name) => name !== topic),
-                    )
-                  }
-                >
-                  {open ? <ChevronDown /> : <ChevronRight />}
-                  <span className="inline-flex items-center gap-2">
-                    {topic}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {shownPrompts.length}{" "}
-                      {shownPrompts.length === 1 ? "prompt" : "prompts"}
-                      {paused ? " · Paused" : ""}
-                    </span>
-                  </span>
-                </Button>
-              </TableCell>
-              <TableCell>
-                <PromptRate
-                  rows={topicRows}
-                  kind="mentioned"
-                  loading={loading}
-                />
-              </TableCell>
-              <TableCell>
-                <PromptRate rows={topicRows} kind="cited" loading={loading} />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end gap-1">
+    <>
+      <Table className="min-w-[900px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-full">Prompts by topic</TableHead>
+            <TableHead>Engines</TableHead>
+            <TableHead>Brand mentions</TableHead>
+            <TableHead>Owned citations</TableHead>
+            <TableHead>
+              <span className="sr-only">Manage tracking</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        {topics.map((topic) => {
+          const topicPrompts = prompts.filter(
+            (prompt) => prompt.topic === topic,
+          );
+          const shownPrompts = topicPrompts.filter(matches);
+          if (!shownPrompts.length) return null;
+          const paused = topicPrompts.every((prompt) => prompt.paused);
+          const topicRows = rows?.filter((row) =>
+            shownPrompts.some((prompt) => prompt.id === row.promptId),
+          );
+          const open = !collapsed.includes(topic);
+          return (
+            <TableBody key={topic}>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableCell colSpan={2} className="py-3">
                   <Button
                     variant="ghost"
-                    size="icon-xs"
-                    disabled={pending}
-                    title={paused ? "Resume topic" : "Pause topic"}
-                    aria-label={`${paused ? "Resume" : "Pause"} topic ${topic}`}
-                    onClick={() => {
-                      const patch = {
-                        prompts: topicPrompts.map((prompt) => ({
-                          id: prompt.id,
-                          text: prompt.text,
-                          paused: !paused,
-                        })),
-                      };
-                      if (paused)
-                        onReview(patch, `Resume prompts in ${topic}.`);
-                      else onReduce(patch);
-                    }}
-                  >
-                    {paused ? (
-                      <Play className="size-3.5" />
-                    ) : (
-                      <Pause className="size-3.5" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    disabled={pending}
-                    title="Archive topic; keep prompt history"
-                    aria-label={`Archive topic ${topic}`}
+                    size="sm"
+                    className="flex h-auto items-center justify-start gap-2 px-0 text-left hover:bg-transparent aria-expanded:bg-transparent"
+                    aria-expanded={open}
                     onClick={() =>
-                      onReduce({
-                        archivePromptIds: topicPrompts.map(
-                          (prompt) => prompt.id,
-                        ),
-                      })
+                      setCollapsed((names) =>
+                        open
+                          ? [...names, topic]
+                          : names.filter((name) => name !== topic),
+                      )
                     }
                   >
-                    <Archive className="size-3.5" />
+                    {open ? <ChevronDown /> : <ChevronRight />}
+                    <span className="inline-flex items-center gap-2">
+                      {topic}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {shownPrompts.length}{" "}
+                        {shownPrompts.length === 1 ? "prompt" : "prompts"}
+                        {paused ? " · Paused" : ""}
+                      </span>
+                    </span>
                   </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-            {open &&
-              shownPrompts.map((prompt) => {
-                const promptRows = rows?.filter(
-                  (row) => row.promptId === prompt.id,
-                );
-                return (
-                  <TableRow key={prompt.id}>
-                    <TableCell className="min-w-72 py-4 pl-10 first:pl-10">
-                      <Link
-                        to="/p/$projectId/ai-visibility/prompts/$promptId"
-                        params={{ projectId, promptId: prompt.id }}
-                        className="whitespace-pre-wrap text-sm font-medium underline-offset-4 hover:text-primary hover:underline"
-                        data-ph-mask
-                      >
-                        {prompt.text}
-                      </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {prompt.paused ? "Paused" : "Active"} ·{" "}
-                        {prompt.branded ? "Branded" : "Non-branded"}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex min-w-64 items-center gap-3">
-                        {engines.map((engine) => (
-                          <EngineResult
-                            key={engine}
-                            engine={engine}
-                            row={promptRows?.find(
-                              (row) => row.engine === engine,
-                            )}
+                </TableCell>
+                <TableCell>
+                  <PromptRate
+                    rows={topicRows}
+                    kind="mentioned"
+                    loading={loading}
+                  />
+                </TableCell>
+                <TableCell>
+                  <PromptRate rows={topicRows} kind="cited" loading={loading} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end">
+                    <PromptActionsMenu
+                      label={`Actions for topic ${topic}`}
+                      kind="topic"
+                      paused={paused}
+                      scheduled={scheduled}
+                      pending={pending}
+                      onTogglePause={() => {
+                        const patch = {
+                          prompts: topicPrompts.map((prompt) => ({
+                            id: prompt.id,
+                            text: prompt.text,
+                            paused: !paused,
+                          })),
+                        };
+                        if (paused)
+                          onReview(patch, `Resume prompts in ${topic}.`);
+                        else onReduce(patch);
+                      }}
+                      onArchive={() =>
+                        setArchiving({
+                          kind: "topic",
+                          name: topic,
+                          promptIds: topicPrompts.map((prompt) => prompt.id),
+                        })
+                      }
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+              {open &&
+                shownPrompts.map((prompt) => {
+                  const promptRows = rows?.filter(
+                    (row) => row.promptId === prompt.id,
+                  );
+                  return (
+                    <TableRow key={prompt.id}>
+                      <TableCell className="min-w-72 py-4 pl-10 first:pl-10">
+                        <Link
+                          to="/p/$projectId/ai-visibility/prompts/$promptId"
+                          params={{ projectId, promptId: prompt.id }}
+                          className="whitespace-pre-wrap text-sm font-medium underline-offset-4 hover:text-primary hover:underline"
+                          data-ph-mask
+                        >
+                          {prompt.text}
+                        </Link>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {prompt.paused ? "Paused" : "Active"} ·{" "}
+                          {prompt.branded ? "Branded" : "Non-branded"}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex min-w-64 items-center gap-3">
+                          {engines.map((engine) => (
+                            <EngineResult
+                              key={engine}
+                              engine={engine}
+                              row={promptRows?.find(
+                                (row) => row.engine === engine,
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <PromptRate
+                          rows={promptRows}
+                          kind="mentioned"
+                          loading={loading}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <PromptRate
+                          rows={promptRows}
+                          kind="cited"
+                          loading={loading}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <PromptActionsMenu
+                            label={`Actions for ${prompt.text}`}
+                            kind="prompt"
+                            paused={prompt.paused}
+                            scheduled={scheduled}
+                            pending={pending}
+                            onEdit={() => onEdit(prompt)}
+                            onTogglePause={() => {
+                              const patch = {
+                                prompts: [
+                                  {
+                                    id: prompt.id,
+                                    text: prompt.text,
+                                    paused: !prompt.paused,
+                                  },
+                                ],
+                              };
+                              if (prompt.paused)
+                                onReview(
+                                  patch,
+                                  "Resume this prompt in your tracker.",
+                                );
+                              else onReduce(patch);
+                            }}
+                            onArchive={() =>
+                              setArchiving({
+                                kind: "prompt",
+                                name: prompt.text,
+                                promptIds: [prompt.id],
+                              })
+                            }
                           />
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <PromptRate
-                        rows={promptRows}
-                        kind="mentioned"
-                        loading={loading}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <PromptRate
-                        rows={promptRows}
-                        kind="cited"
-                        loading={loading}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          title="Edit prompt"
-                          aria-label={`Edit ${prompt.text}`}
-                          onClick={() => onEdit(prompt)}
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          disabled={pending}
-                          title={
-                            prompt.paused ? "Resume prompt" : "Pause prompt"
-                          }
-                          aria-label={`${prompt.paused ? "Resume" : "Pause"} ${prompt.text}`}
-                          onClick={() => {
-                            const patch = {
-                              prompts: [
-                                {
-                                  id: prompt.id,
-                                  text: prompt.text,
-                                  paused: !prompt.paused,
-                                },
-                              ],
-                            };
-                            if (prompt.paused)
-                              onReview(
-                                patch,
-                                "Resume this prompt in your tracker.",
-                              );
-                            else onReduce(patch);
-                          }}
-                        >
-                          {prompt.paused ? (
-                            <Play className="size-3.5" />
-                          ) : (
-                            <Pause className="size-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          disabled={pending}
-                          title="Archive prompt; keep history"
-                          aria-label={`Archive ${prompt.text}`}
-                          onClick={() =>
-                            onReduce({ archivePromptIds: [prompt.id] })
-                          }
-                        >
-                          <Archive className="size-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        );
-      })}
-    </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          );
+        })}
+      </Table>
+      {archiving && (
+        <ConfirmDialog
+          title={`Archive ${archiving.kind}?`}
+          confirmLabel="Archive"
+          destructive
+          onConfirm={() => {
+            onReduce({ archivePromptIds: archiving.promptIds });
+            setArchiving(null);
+          }}
+          onClose={() => setArchiving(null)}
+        >
+          {archiving.kind === "topic"
+            ? `This stops tracking every prompt in "${archiving.name}".`
+            : `This stops tracking "${archiving.name}".`}{" "}
+          You can't view archived prompts yet. Their answer history is kept and
+          returns if you add the same prompt again.
+        </ConfirmDialog>
+      )}
+    </>
   );
 }
 

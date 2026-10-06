@@ -59,7 +59,7 @@ export const saveProjectWebsiteSetupTool = {
   config: {
     title: "Save reviewed website setup",
     description:
-      "Fill missing website domain, business overview, and competitors after the user confirms setup. Existing project values and competitor lists are authoritative and never overwritten, including values saved while research was running. Pass suggestedTopics and suggestedKeywords from research: when research keywords are missing, the topic names and keywords fill them, and the first three topics seed initial paused AI tracking. Existing keywords and tracking stay intact. New competitor lists can include reviewed manual additions without research evidence. Use update_project_context for explicit edits to saved context. Uses no credits and never starts answer collection.",
+      "Fill missing website domain, business overview, and competitors after the user confirms setup. Existing project values and competitor lists are authoritative and never overwritten, including values saved while research was running. Pass suggestedTopics and suggestedKeywords from research: when research keywords are missing, the topic names and keywords fill them, and the first three topics seed initial AI tracking on a weekly schedule, with its first paid check about a week later. Existing keywords and tracking stay intact. New competitor lists can include reviewed manual additions without research evidence. Use update_project_context for explicit edits to saved context. Uses no credits now and never starts answer collection immediately.",
     inputSchema: saveProjectWebsiteSetupSchema.shape,
     outputSchema: z.looseObject({
       project: looseObjectOutputSchema,
