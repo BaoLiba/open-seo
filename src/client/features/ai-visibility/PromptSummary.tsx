@@ -1,5 +1,7 @@
-import { StatTile } from "@/client/components/StatTile";
+import { useState } from "react";
+import { sort } from "remeda";
 import { Badge } from "@/client/components/ui/badge";
+import { Button } from "@/client/components/ui/button";
 import {
   Table,
   TableBody,
@@ -8,91 +10,97 @@ import {
   TableHeader,
   TableRow,
 } from "@/client/components/ui/table";
-import type { AiResults } from "@/shared/ai-visibility";
+import type { AiBrandSummary } from "@/shared/ai-visibility";
 import { DomainFavicon } from "./DomainFavicon";
 import { aiRate } from "./shared";
 
-export function PromptSummary({
-  results,
-}: {
-  results: Pick<AiResults, "summaries" | "coverage">;
-}) {
-  const own = results.summaries.find((brand) => brand.own);
+// Your brand plus the top three competitors.
+const VISIBLE_BRANDS = 4;
+
+export function PromptSummary({ summaries }: { summaries: AiBrandSummary[] }) {
+  const [expanded, setExpanded] = useState(false);
+  // Most-mentioned competitors first, so the collapsed table shows the ones that matter.
+  const ranked = sort(
+    summaries,
+    (a, b) =>
+      Number(b.own) - Number(a.own) ||
+      b.mentions - a.mentions ||
+      b.citations - a.citations,
+  );
+  const visible = expanded ? ranked : ranked.slice(0, VISIBLE_BRANDS);
+  const hiddenCount = ranked.length - visible.length;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border bg-card p-5 border-border">
-        <StatTile
-          label="Brand mentions"
-          value={aiRate(own?.mentions ?? 0, own?.answers ?? 0)}
-          hint={`${own?.mentions ?? 0} of ${own?.answers ?? 0} answers`}
-        />
-        <StatTile
-          label="Owned citations"
-          value={aiRate(own?.citations ?? 0, own?.answers ?? 0)}
-          hint={`${own?.citations ?? 0} of ${own?.answers ?? 0} answers`}
-        />
-        <StatTile label="Answers" value={String(results.coverage.completed)} />
-      </div>
-      <div className="overflow-hidden rounded-lg border bg-card border-border">
-        <h2 className="border-b px-4 py-2 text-sm font-medium border-border">
-          Brand comparison
-        </h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Brand</TableHead>
-              <TableHead>Mentioned</TableHead>
-              <TableHead>Cited</TableHead>
+    <div className="overflow-hidden rounded-lg border bg-card border-border">
+      <h2 className="border-b px-4 py-2 text-sm font-medium border-border">
+        Brand comparison
+      </h2>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Brand</TableHead>
+            <TableHead>Mentioned</TableHead>
+            <TableHead>Cited</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {visible.map((brand) => (
+            <TableRow key={brand.domain}>
+              <TableCell>
+                <span className="flex items-center gap-2">
+                  <DomainFavicon domain={brand.domain} />
+                  {brand.name}
+                  {brand.own && (
+                    <Badge variant="secondary" size="sm">
+                      You
+                    </Badge>
+                  )}
+                </span>
+              </TableCell>
+              <TableCell
+                className="tabular-nums"
+                title={`${brand.mentions} of ${brand.answers} answers`}
+              >
+                {aiRate(brand.mentions, brand.answers)}
+                {brand.answers > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {brand.mentions} of {brand.answers}
+                  </p>
+                )}
+              </TableCell>
+              <TableCell
+                className="tabular-nums"
+                title={`${brand.citations} of ${brand.answers} answers`}
+              >
+                {aiRate(brand.citations, brand.answers)}
+                {brand.answers > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {brand.citations} of {brand.answers}
+                  </p>
+                )}
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {results.summaries.map((brand) => (
-              <TableRow key={brand.domain}>
-                <TableCell>
-                  <span className="flex items-center gap-2">
-                    <DomainFavicon domain={brand.domain} />
-                    {brand.name}
-                    {brand.own && (
-                      <Badge variant="secondary" size="sm">
-                        You
-                      </Badge>
-                    )}
-                  </span>
-                </TableCell>
-                <TableCell
-                  className="tabular-nums"
-                  title={`${brand.mentions} of ${brand.answers} answers`}
-                >
-                  {aiRate(brand.mentions, brand.answers)}
-                  {brand.answers > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {brand.mentions} of {brand.answers}
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell
-                  className="tabular-nums"
-                  title={`${brand.citations} of ${brand.answers} answers`}
-                >
-                  {aiRate(brand.citations, brand.answers)}
-                  {brand.answers > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {brand.citations} of {brand.answers}
-                    </p>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {!results.summaries.length && (
-              <TableRow>
-                <TableCell colSpan={3} className="py-4 text-muted-foreground">
-                  No brand evidence is available for this period yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+          ))}
+          {!summaries.length && (
+            <TableRow>
+              <TableCell colSpan={3} className="py-4 text-muted-foreground">
+                No brand evidence is available for this period yet.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      {hiddenCount > 0 && (
+        <div className="border-t px-4 py-2 border-border">
+          <Button
+            variant="link"
+            size="xs"
+            className="h-auto px-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setExpanded(true)}
+          >
+            Show {hiddenCount} more
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

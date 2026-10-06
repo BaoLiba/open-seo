@@ -2,10 +2,7 @@ import { useState } from "react";
 import { sort } from "remeda";
 import { Button } from "@/client/components/ui/button";
 import type { AiPrompt } from "@/shared/ai-visibility";
-import {
-  aiAnswerCoverage,
-  summarizeAiBrands,
-} from "@/shared/ai-visibility-results";
+import { summarizeAiBrands } from "@/shared/ai-visibility-results";
 import type { getAiVisibilityResults } from "@/serverFunctions/ai-visibility";
 import { PromptAnswers } from "./PromptAnswers";
 import {
@@ -52,15 +49,13 @@ export function PromptAnalysis({
         observation.answerStatus === "answered",
     ) ??
     executions[0];
-  const rows = executions.map(({ observation }) => observation);
-  const results = {
-    summaries: summarizeAiBrands(rows),
-    coverage: aiAnswerCoverage(rows),
-  };
+  const summaries = summarizeAiBrands(
+    executions.map(({ observation }) => observation),
+  );
   return (
     <div className="space-y-4">
       <PromptDateRange value={period} onChange={setPeriod} />
-      <PromptSummary results={results} />
+      <PromptSummary summaries={summaries} />
       {selected ? (
         <>
           <PromptExecutions
