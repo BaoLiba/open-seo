@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileDown, Plus, Sheet, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/client/components/ConfirmDialog";
@@ -86,7 +86,12 @@ export function RankTrackingTable({
   });
 
   // The pinned column sorts first and stays out of the sorting the page owns.
-  const tableSorting = [{ id: PINNED_COLUMN_ID, desc: false }, ...sorting];
+  // Keep sorting stable across the table's own state updates, which otherwise
+  // recompute sorted rows and queue another pagination reset on every render.
+  const tableSorting = useMemo(
+    () => [{ id: PINNED_COLUMN_ID, desc: false }, ...sorting],
+    [sorting],
+  );
   const table = useDataTable({
     data: rows,
     columns,
