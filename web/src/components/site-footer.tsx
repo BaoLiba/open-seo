@@ -93,6 +93,18 @@ export function SiteFooter({ className }: { className?: string }) {
           </div>
         </div>
       </div>
+
+      <div className="mt-8">
+        <a
+          href="https://www.ycombinator.com/companies/openseo"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-2.5 rounded-md border border-neutral-300 bg-white/60 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff6600]"
+        >
+          <img src="/y-combinator.svg" alt="" width={24} height={24} />
+          <span>Backed by Y Combinator</span>
+        </a>
+      </div>
     </div>
   );
 }
