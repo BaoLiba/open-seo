@@ -1,7 +1,7 @@
 # Review guidelines
 
-Context for anyone or any agent reviewing an OpenSEO change: the merge-ready
-subagents, `/code-review`, and human reviewers. It began life as the
+Context for anyone or any agent reviewing an OpenSEO change: merge-ready,
+`/code-review`, and human reviewers. It began life as the
 repository's Greptile configuration; Greptile is no longer wired to this
 repository, but the invariants and the false-positive controls still describe
 how the codebase is meant to work. Keep this file high-signal: a review finding
