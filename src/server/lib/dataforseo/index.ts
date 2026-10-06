@@ -31,6 +31,10 @@ export {
   fetchRankCheckTaskResult,
 } from "@/server/lib/dataforseo/serp";
 export {
+  fetchAiTrackingTaskResult,
+  type PostedAiTrackingTask,
+} from "@/server/lib/dataforseo/ai-tracking";
+export {
   fetchBusinessDataTaskResult,
   fetchBusinessListingsCategories,
   type BusinessTaskEndpoint,

@@ -73,6 +73,9 @@ export const projects = pgTable(
     // Soft delete: archived projects are hidden everywhere but their data
     // (keywords, rank tracking, audits) is preserved.
     archivedAt: timestampColumn("archived_at"),
+    // The Prompt Research keywords from AI visibility setup, one
+    // per line, most important first. Null until setup runs.
+    aiResearchKeywords: text("ai_research_keywords"),
   },
   (table) => [
     // Only the auto-created Default/null-domain project is a singleton. This

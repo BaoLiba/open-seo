@@ -1,4 +1,20 @@
 import {
+  getAiVisibilityTrackerTool,
+  generateAiVisibilityPromptsTool,
+  researchAiVisibilityPromptsTool,
+  completeAiResearchSetupTool,
+  saveAiVisibilityTrackerTool,
+  estimateAiVisibilityCostTool,
+  setAiVisibilityScheduleTool,
+  runAiVisibilityCheckTool,
+  getAiVisibilityRunTool,
+  getAiVisibilityResultsTool,
+  getAiVisibilityAnswerTool,
+  getAiVisibilitySourcesTool,
+  getAiVisibilityTrendTool,
+  exportAiVisibilityDataTool,
+} from "@/server/mcp/tools/ai-visibility-tools";
+import {
   type CallToolResult,
   McpServer,
   type ToolAnnotations,
@@ -38,6 +54,10 @@ import {
 } from "@/server/mcp/tools/google-analytics-tools";
 import { createProjectTool } from "@/server/mcp/tools/create-project";
 import { listProjectsTool } from "@/server/mcp/tools/list-projects";
+import {
+  researchProjectWebsiteTool,
+  saveProjectWebsiteSetupTool,
+} from "@/server/mcp/tools/project-website";
 import {
   getProjectContextTool,
   updateProjectContextTool,
@@ -88,6 +108,7 @@ import {
   listSiteAuditsTool,
 } from "@/server/mcp/tools/site-audit-cleanup-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
+import { explorePromptTool } from "@/server/mcp/tools/explore-prompt";
 
 type ToolSchema = z.ZodType | z.ZodRawShape;
 
@@ -182,6 +203,8 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(whoamiTool);
   register(listProjectsTool);
   register(createProjectTool);
+  register(researchProjectWebsiteTool);
+  register(saveProjectWebsiteSetupTool);
   register(getProjectContextTool);
   register(updateProjectContextTool);
   register(listSavedKeywordsTool);
@@ -194,6 +217,21 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(getBacklinksProfileTool);
   register(getSerpResultsTool);
   register(searchSerpLocationsTool);
+  register(getAiVisibilityTrackerTool);
+  register(explorePromptTool);
+  register(generateAiVisibilityPromptsTool);
+  register(researchAiVisibilityPromptsTool);
+  register(completeAiResearchSetupTool);
+  register(saveAiVisibilityTrackerTool);
+  register(estimateAiVisibilityCostTool);
+  register(setAiVisibilityScheduleTool);
+  register(runAiVisibilityCheckTool);
+  register(getAiVisibilityRunTool);
+  register(getAiVisibilityResultsTool);
+  register(getAiVisibilityAnswerTool);
+  register(getAiVisibilitySourcesTool);
+  register(getAiVisibilityTrendTool);
+  register(exportAiVisibilityDataTool);
   register(createRankTrackerTool);
   register(getRankTrackerTool);
   register(addRankTrackingKeywordsTool);

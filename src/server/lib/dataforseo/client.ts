@@ -59,6 +59,7 @@ import {
   fetchLlmResponse,
   fetchLlmTopPages,
 } from "@/server/lib/dataforseo/ai";
+import { postAiTrackingTasks } from "@/server/lib/dataforseo/ai-tracking";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { AppError } from "@/server/lib/errors";
 
@@ -286,6 +287,14 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
         customer,
         fetchLlmResponse,
         dataforseoPricing.aiSearch.llmResponse,
+      ),
+      // Posts up to 100 tracked prompts for one engine; one metered charge
+      // covers the batch (DataForSEO bills task_post, collection is free).
+      trackingTaskPost: meter(
+        customer,
+        postAiTrackingTasks,
+        dataforseoPricing.aiSearch.trackingTaskPost,
+        "ai_prompt_responses",
       ),
     },
   } as const;

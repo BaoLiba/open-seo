@@ -1,3 +1,19 @@
+import {
+  getAiVisibilityTrackerTool,
+  generateAiVisibilityPromptsTool,
+  researchAiVisibilityPromptsTool,
+  completeAiResearchSetupTool,
+  saveAiVisibilityTrackerTool,
+  estimateAiVisibilityCostTool,
+  setAiVisibilityScheduleTool,
+  runAiVisibilityCheckTool,
+  getAiVisibilityRunTool,
+  getAiVisibilityResultsTool,
+  getAiVisibilityAnswerTool,
+  getAiVisibilitySourcesTool,
+  getAiVisibilityTrendTool,
+  exportAiVisibilityDataTool,
+} from "@/server/mcp/tools/ai-visibility-tools";
 import { tool, type Tool, type ToolSet } from "ai";
 import { z, type ZodRawShape } from "zod";
 import { withPgClient } from "@/db";
@@ -60,6 +76,7 @@ import {
   inspectUrlsTool,
 } from "@/server/mcp/tools/search-console-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
+import { explorePromptTool } from "@/server/mcp/tools/explore-prompt";
 import { discoverSiteUrls, readPages, readSite } from "@/server/lib/scrape";
 import { capToolOutput } from "@/server/features/sam/samToolOutput";
 import openSeoFactSheet from "@/server/features/sam/openseo-fact-sheet.md?raw";
@@ -374,6 +391,21 @@ export function buildSamMcpTools(
     get_backlinks_profile: adaptTool(getBacklinksProfileTool),
     get_serp_results: adaptTool(getSerpResultsTool),
     search_serp_locations: adaptTool(searchSerpLocationsTool),
+    get_ai_visibility_tracker: adaptTool(getAiVisibilityTrackerTool),
+    generate_ai_visibility_prompts: adaptTool(generateAiVisibilityPromptsTool),
+    research_ai_visibility_prompts: adaptTool(researchAiVisibilityPromptsTool),
+    complete_ai_research_setup: adaptTool(completeAiResearchSetupTool),
+    explore_prompt: adaptTool(explorePromptTool),
+    save_ai_visibility_tracker: adaptTool(saveAiVisibilityTrackerTool),
+    estimate_ai_visibility_cost: adaptTool(estimateAiVisibilityCostTool),
+    set_ai_visibility_schedule: adaptTool(setAiVisibilityScheduleTool),
+    run_ai_visibility_check: adaptTool(runAiVisibilityCheckTool),
+    get_ai_visibility_run: adaptTool(getAiVisibilityRunTool),
+    get_ai_visibility_results: adaptTool(getAiVisibilityResultsTool),
+    get_ai_visibility_answer: adaptTool(getAiVisibilityAnswerTool),
+    get_ai_visibility_sources: adaptTool(getAiVisibilitySourcesTool),
+    get_ai_visibility_trend: adaptTool(getAiVisibilityTrendTool),
+    export_ai_visibility_data: adaptTool(exportAiVisibilityDataTool),
     create_rank_tracker: adaptTool(createRankTrackerTool),
     get_rank_tracker: adaptTool(getRankTrackerTool),
     add_rank_tracking_keywords: adaptTool(addRankTrackingKeywordsTool),
