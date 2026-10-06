@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as MarketingRouteImport } from './routes/_marketing'
 import { Route as MarketingIndexRouteImport } from './routes/_marketing/index'
 import { Route as MarketingAboutRouteImport } from './routes/_marketing/about'
+import { Route as MarketingAhrefsAlternativeRouteImport } from './routes/_marketing/ahrefs-alternative'
+import { Route as MarketingAhrefsPricingRouteImport } from './routes/_marketing/ahrefs-pricing'
 import { Route as MarketingBacklinkCheckerRouteImport } from './routes/_marketing/backlink-checker'
 import { Route as MarketingCompetitorAnalysisRouteImport } from './routes/_marketing/competitor-analysis'
 import { Route as MarketingCompetitorKeywordFinderRouteImport } from './routes/_marketing/competitor-keyword-finder'
@@ -22,6 +24,8 @@ import { Route as MarketingOpenSourceSeoRouteImport } from './routes/_marketing/
 import { Route as MarketingPricingRouteImport } from './routes/_marketing/pricing'
 import { Route as MarketingPrivacyRouteImport } from './routes/_marketing/privacy'
 import { Route as MarketingRoadmapRouteImport } from './routes/_marketing/roadmap'
+import { Route as MarketingSemrushAlternativeRouteImport } from './routes/_marketing/semrush-alternative'
+import { Route as MarketingSemrushPricingRouteImport } from './routes/_marketing/semrush-pricing'
 import { Route as MarketingSerpSimulatorRouteImport } from './routes/_marketing/serp-simulator'
 import { Route as MarketingSpamScoreCheckerRouteImport } from './routes/_marketing/spam-score-checker'
 import { Route as MarketingSupportRouteImport } from './routes/_marketing/support'
@@ -104,6 +108,17 @@ const MarketingAboutRoute = MarketingAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => MarketingRoute,
 } as any)
+const MarketingAhrefsAlternativeRoute =
+  MarketingAhrefsAlternativeRouteImport.update({
+    id: '/ahrefs-alternative',
+    path: '/ahrefs-alternative',
+    getParentRoute: () => MarketingRoute,
+  } as any)
+const MarketingAhrefsPricingRoute = MarketingAhrefsPricingRouteImport.update({
+  id: '/ahrefs-pricing',
+  path: '/ahrefs-pricing',
+  getParentRoute: () => MarketingRoute,
+} as any)
 const MarketingBacklinkCheckerRoute =
   MarketingBacklinkCheckerRouteImport.update({
     id: '/backlink-checker',
@@ -158,6 +173,17 @@ const MarketingPrivacyRoute = MarketingPrivacyRouteImport.update({
 const MarketingRoadmapRoute = MarketingRoadmapRouteImport.update({
   id: '/roadmap',
   path: '/roadmap',
+  getParentRoute: () => MarketingRoute,
+} as any)
+const MarketingSemrushAlternativeRoute =
+  MarketingSemrushAlternativeRouteImport.update({
+    id: '/semrush-alternative',
+    path: '/semrush-alternative',
+    getParentRoute: () => MarketingRoute,
+  } as any)
+const MarketingSemrushPricingRoute = MarketingSemrushPricingRouteImport.update({
+  id: '/semrush-pricing',
+  path: '/semrush-pricing',
   getParentRoute: () => MarketingRoute,
 } as any)
 const MarketingSerpSimulatorRoute = MarketingSerpSimulatorRouteImport.update({
@@ -549,6 +575,8 @@ const MarketingLibrarySiteAuditTechnicalSeoAuditChecklistRoute =
 export interface FileRoutesByFullPath {
   '/': typeof MarketingIndexRoute
   '/about': typeof MarketingAboutRoute
+  '/ahrefs-alternative': typeof MarketingAhrefsAlternativeRoute
+  '/ahrefs-pricing': typeof MarketingAhrefsPricingRoute
   '/backlink-checker': typeof MarketingBacklinkCheckerRoute
   '/competitor-analysis': typeof MarketingCompetitorAnalysisRoute
   '/competitor-keyword-finder': typeof MarketingCompetitorKeywordFinderRoute
@@ -559,6 +587,8 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof MarketingPricingRoute
   '/privacy': typeof MarketingPrivacyRoute
   '/roadmap': typeof MarketingRoadmapRoute
+  '/semrush-alternative': typeof MarketingSemrushAlternativeRoute
+  '/semrush-pricing': typeof MarketingSemrushPricingRoute
   '/serp-simulator': typeof MarketingSerpSimulatorRoute
   '/spam-score-checker': typeof MarketingSpamScoreCheckerRoute
   '/support': typeof MarketingSupportRoute
@@ -629,6 +659,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/about': typeof MarketingAboutRoute
+  '/ahrefs-alternative': typeof MarketingAhrefsAlternativeRoute
+  '/ahrefs-pricing': typeof MarketingAhrefsPricingRoute
   '/backlink-checker': typeof MarketingBacklinkCheckerRoute
   '/competitor-analysis': typeof MarketingCompetitorAnalysisRoute
   '/competitor-keyword-finder': typeof MarketingCompetitorKeywordFinderRoute
@@ -639,6 +671,8 @@ export interface FileRoutesByTo {
   '/pricing': typeof MarketingPricingRoute
   '/privacy': typeof MarketingPrivacyRoute
   '/roadmap': typeof MarketingRoadmapRoute
+  '/semrush-alternative': typeof MarketingSemrushAlternativeRoute
+  '/semrush-pricing': typeof MarketingSemrushPricingRoute
   '/serp-simulator': typeof MarketingSerpSimulatorRoute
   '/spam-score-checker': typeof MarketingSpamScoreCheckerRoute
   '/support': typeof MarketingSupportRoute
@@ -712,6 +746,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_marketing': typeof MarketingRouteWithChildren
   '/_marketing/about': typeof MarketingAboutRoute
+  '/_marketing/ahrefs-alternative': typeof MarketingAhrefsAlternativeRoute
+  '/_marketing/ahrefs-pricing': typeof MarketingAhrefsPricingRoute
   '/_marketing/backlink-checker': typeof MarketingBacklinkCheckerRoute
   '/_marketing/competitor-analysis': typeof MarketingCompetitorAnalysisRoute
   '/_marketing/competitor-keyword-finder': typeof MarketingCompetitorKeywordFinderRoute
@@ -722,6 +758,8 @@ export interface FileRoutesById {
   '/_marketing/pricing': typeof MarketingPricingRoute
   '/_marketing/privacy': typeof MarketingPrivacyRoute
   '/_marketing/roadmap': typeof MarketingRoadmapRoute
+  '/_marketing/semrush-alternative': typeof MarketingSemrushAlternativeRoute
+  '/_marketing/semrush-pricing': typeof MarketingSemrushPricingRoute
   '/_marketing/serp-simulator': typeof MarketingSerpSimulatorRoute
   '/_marketing/spam-score-checker': typeof MarketingSpamScoreCheckerRoute
   '/_marketing/support': typeof MarketingSupportRoute
@@ -796,6 +834,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/ahrefs-alternative'
+    | '/ahrefs-pricing'
     | '/backlink-checker'
     | '/competitor-analysis'
     | '/competitor-keyword-finder'
@@ -806,6 +846,8 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/roadmap'
+    | '/semrush-alternative'
+    | '/semrush-pricing'
     | '/serp-simulator'
     | '/spam-score-checker'
     | '/support'
@@ -876,6 +918,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
+    | '/ahrefs-alternative'
+    | '/ahrefs-pricing'
     | '/backlink-checker'
     | '/competitor-analysis'
     | '/competitor-keyword-finder'
@@ -886,6 +930,8 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/roadmap'
+    | '/semrush-alternative'
+    | '/semrush-pricing'
     | '/serp-simulator'
     | '/spam-score-checker'
     | '/support'
@@ -958,6 +1004,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_marketing'
     | '/_marketing/about'
+    | '/_marketing/ahrefs-alternative'
+    | '/_marketing/ahrefs-pricing'
     | '/_marketing/backlink-checker'
     | '/_marketing/competitor-analysis'
     | '/_marketing/competitor-keyword-finder'
@@ -968,6 +1016,8 @@ export interface FileRouteTypes {
     | '/_marketing/pricing'
     | '/_marketing/privacy'
     | '/_marketing/roadmap'
+    | '/_marketing/semrush-alternative'
+    | '/_marketing/semrush-pricing'
     | '/_marketing/serp-simulator'
     | '/_marketing/spam-score-checker'
     | '/_marketing/support'
@@ -1081,6 +1131,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingAboutRouteImport
       parentRoute: typeof MarketingRoute
     }
+    '/_marketing/ahrefs-alternative': {
+      id: '/_marketing/ahrefs-alternative'
+      path: '/ahrefs-alternative'
+      fullPath: '/ahrefs-alternative'
+      preLoaderRoute: typeof MarketingAhrefsAlternativeRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/ahrefs-pricing': {
+      id: '/_marketing/ahrefs-pricing'
+      path: '/ahrefs-pricing'
+      fullPath: '/ahrefs-pricing'
+      preLoaderRoute: typeof MarketingAhrefsPricingRouteImport
+      parentRoute: typeof MarketingRoute
+    }
     '/_marketing/backlink-checker': {
       id: '/_marketing/backlink-checker'
       path: '/backlink-checker'
@@ -1149,6 +1213,20 @@ declare module '@tanstack/react-router' {
       path: '/roadmap'
       fullPath: '/roadmap'
       preLoaderRoute: typeof MarketingRoadmapRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/semrush-alternative': {
+      id: '/_marketing/semrush-alternative'
+      path: '/semrush-alternative'
+      fullPath: '/semrush-alternative'
+      preLoaderRoute: typeof MarketingSemrushAlternativeRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/semrush-pricing': {
+      id: '/_marketing/semrush-pricing'
+      path: '/semrush-pricing'
+      fullPath: '/semrush-pricing'
+      preLoaderRoute: typeof MarketingSemrushPricingRouteImport
       parentRoute: typeof MarketingRoute
     }
     '/_marketing/serp-simulator': {
@@ -1625,6 +1703,8 @@ declare module '@tanstack/react-router' {
 
 interface MarketingRouteChildren {
   MarketingAboutRoute: typeof MarketingAboutRoute
+  MarketingAhrefsAlternativeRoute: typeof MarketingAhrefsAlternativeRoute
+  MarketingAhrefsPricingRoute: typeof MarketingAhrefsPricingRoute
   MarketingBacklinkCheckerRoute: typeof MarketingBacklinkCheckerRoute
   MarketingCompetitorAnalysisRoute: typeof MarketingCompetitorAnalysisRoute
   MarketingCompetitorKeywordFinderRoute: typeof MarketingCompetitorKeywordFinderRoute
@@ -1635,6 +1715,8 @@ interface MarketingRouteChildren {
   MarketingPricingRoute: typeof MarketingPricingRoute
   MarketingPrivacyRoute: typeof MarketingPrivacyRoute
   MarketingRoadmapRoute: typeof MarketingRoadmapRoute
+  MarketingSemrushAlternativeRoute: typeof MarketingSemrushAlternativeRoute
+  MarketingSemrushPricingRoute: typeof MarketingSemrushPricingRoute
   MarketingSerpSimulatorRoute: typeof MarketingSerpSimulatorRoute
   MarketingSpamScoreCheckerRoute: typeof MarketingSpamScoreCheckerRoute
   MarketingSupportRoute: typeof MarketingSupportRoute
@@ -1691,6 +1773,8 @@ interface MarketingRouteChildren {
 
 const MarketingRouteChildren: MarketingRouteChildren = {
   MarketingAboutRoute: MarketingAboutRoute,
+  MarketingAhrefsAlternativeRoute: MarketingAhrefsAlternativeRoute,
+  MarketingAhrefsPricingRoute: MarketingAhrefsPricingRoute,
   MarketingBacklinkCheckerRoute: MarketingBacklinkCheckerRoute,
   MarketingCompetitorAnalysisRoute: MarketingCompetitorAnalysisRoute,
   MarketingCompetitorKeywordFinderRoute: MarketingCompetitorKeywordFinderRoute,
@@ -1701,6 +1785,8 @@ const MarketingRouteChildren: MarketingRouteChildren = {
   MarketingPricingRoute: MarketingPricingRoute,
   MarketingPrivacyRoute: MarketingPrivacyRoute,
   MarketingRoadmapRoute: MarketingRoadmapRoute,
+  MarketingSemrushAlternativeRoute: MarketingSemrushAlternativeRoute,
+  MarketingSemrushPricingRoute: MarketingSemrushPricingRoute,
   MarketingSerpSimulatorRoute: MarketingSerpSimulatorRoute,
   MarketingSpamScoreCheckerRoute: MarketingSpamScoreCheckerRoute,
   MarketingSupportRoute: MarketingSupportRoute,

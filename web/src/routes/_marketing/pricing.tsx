@@ -58,7 +58,8 @@ const RAW_COST_USD = {
   aiCitationPerPlatform: 0.85, // AI-citation / brand scan, per platform (biggest driver)
 } as const;
 
-// Ahrefs Lite list price, verified 2026-07-01 (ahrefs.com/pricing).
+// Ahrefs Lite list price, verified 2026-10-05 (ahrefs.com/pricing). Starter
+// ($29) is cheaper but has 200 credits and no API, so Lite is the comparison.
 const COMPETITORS = {
   ahrefsLite: 129,
 } as const;
@@ -401,7 +402,14 @@ function Pricing() {
             </div>
 
             <p className="mt-5 border-t border-[var(--color-border-subtle)] pt-5 text-sm text-[var(--color-brand-muted)]">
-              For comparison: Ahrefs&apos; cheapest plan is{" "}
+              For comparison:{" "}
+              <a
+                href="/ahrefs-pricing"
+                className="underline decoration-[var(--color-brand-accent)] underline-offset-4 hover:text-neutral-950"
+              >
+                Ahrefs Lite
+              </a>{" "}
+              is{" "}
               <span className="font-medium text-neutral-950">
                 {usd(COMPETITORS.ahrefsLite)}/mo
               </span>

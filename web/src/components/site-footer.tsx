@@ -29,13 +29,25 @@ export function SiteFooter({ className }: { className?: string }) {
           </div>
         </div>
 
-        <div>
-          <p className="font-semibold text-neutral-900">AI agents</p>
-          <div className="mt-2 flex flex-col gap-1.5">
-            <Link to="/features/mcp">OpenSEO MCP</Link>
-            <Link to="/google-search-console-mcp">
-              Google Search Console MCP
-            </Link>
+        <div className="flex flex-col gap-8">
+          <div>
+            <p className="font-semibold text-neutral-900">AI agents</p>
+            <div className="mt-2 flex flex-col gap-1.5">
+              <Link to="/features/mcp">OpenSEO MCP</Link>
+              <Link to="/google-search-console-mcp">
+                Google Search Console MCP
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <p className="font-semibold text-neutral-900">Compare</p>
+            <div className="mt-2 flex flex-col gap-1.5">
+              <Link to="/semrush-alternative">Semrush alternative</Link>
+              <Link to="/semrush-pricing">Semrush pricing</Link>
+              <Link to="/ahrefs-alternative">Ahrefs alternative</Link>
+              <Link to="/ahrefs-pricing">Ahrefs pricing</Link>
+            </div>
           </div>
         </div>
 
