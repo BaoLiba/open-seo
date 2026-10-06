@@ -12,11 +12,7 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { AiPrompt, AiRun, AiTrackerState } from "@/shared/ai-visibility";
 import type { AiTrackerPatch } from "@/types/schemas/ai-visibility";
 import { PromptInventory } from "./PromptInventory";
-import {
-  AiQueryError,
-  aiVisibilityKey,
-  fetchAllAiVisibilityResults,
-} from "./shared";
+import { AiQueryError, aiRunResultsQueryOptions } from "./shared";
 
 export function PromptList({
   projectId,
@@ -38,18 +34,7 @@ export function PromptList({
   reducePending: boolean;
 }) {
   const [search, setSearch] = useState("");
-  // Every answer in the run, so each prompt can show its per-engine result.
-  const results = useQuery({
-    queryKey: [...aiVisibilityKey(projectId), "results", "all", currentRun?.id],
-    queryFn: async () => {
-      const result = await fetchAllAiVisibilityResults({
-        projectId,
-        runId: currentRun?.id,
-      });
-      return result.rows;
-    },
-    enabled: Boolean(currentRun),
-  });
+  const results = useQuery(aiRunResultsQueryOptions(projectId, currentRun?.id));
   const exportMutation = useMutation({
     mutationFn: (format: "json" | "csv") =>
       exportAiVisibilityData({
@@ -112,11 +97,6 @@ export function PromptList({
           }}
         />
       )}
-      {currentRun && results.isPending && (
-        <p className="px-4 py-2 text-xs text-muted-foreground" role="status">
-          Loading latest results…
-        </p>
-      )}
       <PromptInventory
         projectId={projectId}
         prompts={prompts}
@@ -124,6 +104,7 @@ export function PromptList({
         search={search}
         engines={state.engines}
         rows={results.data}
+        loading={results.isLoading}
         pending={reducePending}
         onEdit={onEdit}
         onReduce={onReduce}

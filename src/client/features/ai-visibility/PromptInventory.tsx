@@ -16,6 +16,7 @@ import {
   type AiPrompt,
 } from "@/shared/ai-visibility";
 import { Button } from "@/client/components/ui/button";
+import { Skeleton } from "@/client/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ export function PromptInventory({
   search,
   engines,
   rows,
+  loading,
   pending,
   onEdit,
   onReduce,
@@ -47,6 +49,8 @@ export function PromptInventory({
   search: string;
   engines: AiEngine[];
   rows: AiObservationRow[] | undefined;
+  /** The run's answers are still loading; prompts show before their rates. */
+  loading: boolean;
   pending: boolean;
   onEdit: (prompt: AiPrompt) => void;
   onReduce: (patch: AiTrackerPatch) => void;
@@ -113,10 +117,14 @@ export function PromptInventory({
                 </Button>
               </TableCell>
               <TableCell>
-                <PromptRate rows={topicRows} kind="mentioned" />
+                <PromptRate
+                  rows={topicRows}
+                  kind="mentioned"
+                  loading={loading}
+                />
               </TableCell>
               <TableCell>
-                <PromptRate rows={topicRows} kind="cited" />
+                <PromptRate rows={topicRows} kind="cited" loading={loading} />
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-1">
@@ -199,10 +207,18 @@ export function PromptInventory({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <PromptRate rows={promptRows} kind="mentioned" />
+                      <PromptRate
+                        rows={promptRows}
+                        kind="mentioned"
+                        loading={loading}
+                      />
                     </TableCell>
                     <TableCell>
-                      <PromptRate rows={promptRows} kind="cited" />
+                      <PromptRate
+                        rows={promptRows}
+                        kind="cited"
+                        loading={loading}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
@@ -274,10 +290,13 @@ export function PromptInventory({
 function PromptRate({
   rows,
   kind,
+  loading,
 }: {
   rows: AiObservationRow[] | undefined;
   kind: "mentioned" | "cited";
+  loading: boolean;
 }) {
+  if (loading) return <Skeleton className="h-4 w-10" />;
   const eligible =
     rows?.filter(
       (row) =>

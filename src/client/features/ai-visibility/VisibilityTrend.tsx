@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Info, TriangleAlert } from "lucide-react";
 import { cn } from "cn";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
@@ -42,13 +42,18 @@ function notice(trend: AiTrend) {
   }
 }
 
-/** The trend panel inside the Prompt tracking card, laid out like rank tracking's overview. */
-export function VisibilityTrend({ projectId }: { projectId: string }) {
-  const [days, setDays] = useState<7 | 28 | 90>(7);
-  const query = useQuery({
+type AiTrendDays = 7 | 28 | 90;
+
+export const aiTrendQueryOptions = (projectId: string, days: AiTrendDays) =>
+  queryOptions({
     queryKey: [...aiVisibilityKey(projectId), "results", "trend", days],
     queryFn: () => getAiVisibilityTrend({ data: { projectId, days } }),
   });
+
+/** The trend panel inside the Prompt tracking card, laid out like rank tracking's overview. */
+export function VisibilityTrend({ projectId }: { projectId: string }) {
+  const [days, setDays] = useState<AiTrendDays>(7);
+  const query = useQuery(aiTrendQueryOptions(projectId, days));
   const trend = query.data;
   const message = trend && notice(trend);
   // Incomplete collection and a changed scope need attention; missing history does not.

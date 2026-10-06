@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Play, Plus, Settings2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ import {
   type PromptTrackingTab,
 } from "./PromptTrackingTabs";
 import { TrackerEditor, TrackerEditorMode } from "./TrackerEditor";
-import { TrackingCostReview } from "./TrackingCostReview";
+import { prefetchRunNowCost, TrackingCostReview } from "./TrackingCostReview";
 import { VisibilityTrend } from "./VisibilityTrend";
 import { RunStatusLine } from "./RunStatusLine";
 import { TrackingScheduleSummary } from "./TrackingScheduleSummary";
@@ -145,6 +145,12 @@ function PromptTrackingContent({
   });
   const busy =
     progress.run?.status === "running" || progress.run?.status === "queued";
+  // Price Run now on load and again when the active prompts or engines
+  // change, so the dialog opens on the current price.
+  const engines = state.engines.join();
+  useEffect(() => {
+    if (tracker) prefetchRunNowCost(queryClient, projectId, tracker);
+  }, [queryClient, projectId, tracker, activePrompts.length, engines]);
   const schedule = tracker && (
     <TrackingScheduleSummary
       tracker={tracker}

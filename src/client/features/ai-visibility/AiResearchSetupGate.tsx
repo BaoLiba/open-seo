@@ -8,14 +8,15 @@ import { Card, CardContent } from "@/client/components/ui/card";
 import { projectsQueryOptions } from "@/client/features/projects/projectQueries";
 import { WebsiteResearchProgress } from "@/client/features/projects/WebsiteResearchProgress";
 import { WebsiteSetupReview } from "@/client/features/projects/WebsiteSetupReview";
-import {
-  getAiResearchSetup,
-  startAiResearchSetup,
-} from "@/serverFunctions/ai-visibility";
+import { startAiResearchSetup } from "@/serverFunctions/ai-visibility";
 import { saveProjectWebsiteSetup } from "@/serverFunctions/projectWebsite";
 import type { SaveProjectWebsiteSetup } from "@/types/schemas/projectWebsite";
 import { SkeletonPageContent } from "@/client/components/SkeletonPresets";
-import { AiQueryError, aiVisibilityKey } from "./shared";
+import {
+  AiQueryError,
+  aiResearchSetupQueryOptions,
+  aiVisibilityKey,
+} from "./shared";
 
 /**
  * AI visibility needs research keywords. A project with a website but no
@@ -34,13 +35,8 @@ export function AiResearchSetupGate({
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const setupKey = [...aiVisibilityKey(projectId), "researchSetup"];
-  const setup = useQuery({
-    queryKey: setupKey,
-    queryFn: () => getAiResearchSetup({ data: { projectId } }),
-    refetchInterval: (query) =>
-      query.state.data?.status === "running" ? 3000 : false,
-  });
+  const setupOptions = aiResearchSetupQueryOptions(projectId);
+  const setup = useQuery(setupOptions);
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: aiVisibilityKey(projectId) }),
@@ -53,7 +49,7 @@ export function AiResearchSetupGate({
     ]);
   const start = useMutation({
     mutationFn: () => startAiResearchSetup({ data: { projectId } }),
-    onSuccess: (data) => queryClient.setQueryData(setupKey, data),
+    onSuccess: (data) => queryClient.setQueryData(setupOptions.queryKey, data),
   });
   const save = useMutation({
     mutationFn: (accepted: Omit<SaveProjectWebsiteSetup, "projectId">) =>

@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { FormDialog } from "@/client/components/FormDialog";
 import { Button } from "@/client/components/ui/button";
@@ -25,6 +31,57 @@ import {
   withBrowserTimeZone,
 } from "@/client/features/rank-tracking/scheduleTime";
 import { AiLoading, AiQueryError, aiMoney, aiVisibilityKey } from "./shared";
+
+const costEstimateQueryOptions = ({
+  projectId,
+  mode,
+  scheduleInterval,
+  promptIds,
+}: {
+  projectId: string;
+  mode: "check" | "schedule";
+  scheduleInterval: AiScheduleInterval;
+  promptIds?: string[];
+}) =>
+  queryOptions({
+    queryKey: [
+      ...aiVisibilityKey(projectId),
+      "estimate",
+      mode,
+      scheduleInterval,
+      promptIds,
+    ],
+    queryFn: () =>
+      estimateAiVisibilityCost({
+        data: {
+          projectId,
+          promptIds,
+          scheduleInterval: mode === "schedule" ? scheduleInterval : undefined,
+        },
+      }),
+    // Price the tracker as it is now each time the dialog opens, showing the
+    // price the page preloaded while that runs.
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+/** Starts pricing a run before Run now is clicked, so the dialog opens on a price. */
+export function prefetchRunNowCost(
+  queryClient: QueryClient,
+  projectId: string,
+  tracker: AiTracker,
+  promptIds?: string[],
+) {
+  void queryClient.prefetchQuery(
+    costEstimateQueryOptions({
+      projectId,
+      mode: "check",
+      scheduleInterval: tracker.scheduleInterval,
+      promptIds,
+    }),
+  );
+}
 
 export function TrackingCostReview({
   projectId,
@@ -54,27 +111,13 @@ export function TrackingCostReview({
   );
   const [scheduleTimeEdited, setScheduleTimeEdited] = useState(false);
   const estimate = useQuery({
-    queryKey: [
-      ...aiVisibilityKey(projectId),
-      "estimate",
+    ...costEstimateQueryOptions({
+      projectId,
       mode,
       scheduleInterval,
       promptIds,
-    ],
-    queryFn: () =>
-      estimateAiVisibilityCost({
-        data: {
-          projectId,
-          promptIds,
-          scheduleInterval: mode === "schedule" ? scheduleInterval : undefined,
-        },
-      }),
+    }),
     placeholderData: keepPreviousData,
-    // Price the tracker as it is now each time the dialog opens.
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-    refetchOnWindowFocus: false,
   });
   const cost = estimate.data;
   const start = useMutation({
@@ -128,7 +171,9 @@ export function TrackingCostReview({
           <Button
             disabled={
               !cost ||
-              estimate.isPlaceholderData ||
+              // Approve only the current price, not the preloaded one
+              // still being refreshed.
+              estimate.isFetching ||
               start.isPending ||
               cost.observations === 0
             }
