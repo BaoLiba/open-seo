@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { buildPageSeo } from "@/lib/seo";
+import { SocialLinks } from "@/components/social-links";
 
 const SUPPORT_EMAIL = "support@openseo.so";
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
@@ -81,6 +82,18 @@ function SupportPage() {
           linkText="Open an issue"
         />
       </div>
+
+      <section className="mt-10 border-t border-[var(--color-border-subtle)] pt-8">
+        <h2 className="text-xl font-semibold tracking-tight text-neutral-950">
+          Follow OpenSEO
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--color-brand-muted)]">
+          Keep up with OpenSEO on social media.
+        </p>
+        <div className="mt-3 text-sm text-neutral-700">
+          <SocialLinks />
+        </div>
+      </section>
     </article>
   );
 }

@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { SocialLinks } from "@/components/social-links";
 import { featureGroups } from "@/lib/feature-pages";
 import { freeToolList } from "@/lib/free-tools/tool-pages";
 
@@ -106,7 +107,7 @@ export function SiteFooter({ className }: { className?: string }) {
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
         <a
           href="https://www.ycombinator.com/companies/openseo"
           target="_blank"
@@ -116,6 +117,7 @@ export function SiteFooter({ className }: { className?: string }) {
           <img src="/y-combinator.svg" alt="" width={24} height={24} />
           <span>Backed by Y Combinator</span>
         </a>
+        <SocialLinks />
       </div>
     </div>
   );
