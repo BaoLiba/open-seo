@@ -237,7 +237,7 @@ function PromptTrackingContent({
                 </p>
               )}
             </div>
-            <VisibilityTrend projectId={projectId} />
+            <VisibilityTrend projectId={projectId} collecting={busy} />
             <PromptTrackingTabs projectId={projectId} tab={tab} />
             {tab === "prompts" && (
               <PromptList
@@ -245,6 +245,7 @@ function PromptTrackingContent({
                 projectId={projectId}
                 state={state}
                 currentRun={currentRun}
+                collecting={busy}
                 onSetup={() => setEditorMode(TrackerEditorMode.Prompts)}
                 onEdit={setEditingPrompt}
                 onReduce={(patch) => reduceTracking.mutate(patch)}
@@ -259,6 +260,7 @@ function PromptTrackingContent({
                 projectId={projectId}
                 state={state}
                 runId={currentRun?.id}
+                collecting={busy}
               />
             )}
             {tab === "citations" && (
@@ -267,6 +269,7 @@ function PromptTrackingContent({
                 projectId={projectId}
                 state={state}
                 runId={currentRun?.id}
+                collecting={busy}
               />
             )}
           </div>

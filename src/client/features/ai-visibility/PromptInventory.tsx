@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "cn";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
@@ -11,6 +12,7 @@ import {
 import { ConfirmDialog } from "@/client/components/ConfirmDialog";
 import { Button } from "@/client/components/ui/button";
 import { Skeleton } from "@/client/components/ui/skeleton";
+import { Spinner } from "@/client/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -168,23 +170,46 @@ export function PromptInventory({
                   const promptRows = rows?.filter(
                     (row) => row.promptId === prompt.id,
                   );
+                  const ready = promptHasResults(prompt, rows);
+                  const running =
+                    !ready &&
+                    !!promptRows?.some((row) => row.status === "pending");
+                  // Without answers there is nothing to inspect yet, so the
+                  // prompt and its result cells are grayed out.
+                  const dim = ready ? undefined : "opacity-60";
                   return (
                     <TableRow key={prompt.id}>
-                      <TableCell className="min-w-72 py-4 pl-10 first:pl-10">
-                        <Link
-                          to="/p/$projectId/ai-visibility/prompts/$promptId"
-                          params={{ projectId, promptId: prompt.id }}
-                          className="whitespace-pre-wrap text-sm font-medium underline-offset-4 hover:text-primary hover:underline"
-                          data-ph-mask
-                        >
-                          {prompt.text}
-                        </Link>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {prompt.paused ? "Paused" : "Active"} ·{" "}
-                          {prompt.branded ? "Branded" : "Non-branded"}
+                      <TableCell
+                        className={cn("min-w-72 py-4 pl-10 first:pl-10", dim)}
+                      >
+                        {ready ? (
+                          <Link
+                            to="/p/$projectId/ai-visibility/prompts/$promptId"
+                            params={{ projectId, promptId: prompt.id }}
+                            className="whitespace-pre-wrap text-sm font-medium underline-offset-4 hover:text-primary hover:underline"
+                            data-ph-mask
+                          >
+                            {prompt.text}
+                          </Link>
+                        ) : (
+                          <span
+                            className="whitespace-pre-wrap text-sm font-medium text-muted-foreground"
+                            data-ph-mask
+                          >
+                            {prompt.text}
+                          </span>
+                        )}
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {running && <Spinner className="size-3" />}
+                          {running
+                            ? "Collecting answers"
+                            : prompt.paused
+                              ? "Paused"
+                              : "Active"}{" "}
+                          · {prompt.branded ? "Branded" : "Non-branded"}
                         </p>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={dim}>
                         <div className="flex min-w-64 items-center gap-3">
                           {engines.map((engine) => (
                             <EngineResult
@@ -197,14 +222,14 @@ export function PromptInventory({
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={dim}>
                         <PromptRate
                           rows={promptRows}
                           kind="mentioned"
                           loading={loading}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={dim}>
                         <PromptRate
                           rows={promptRows}
                           kind="cited"
@@ -273,6 +298,22 @@ export function PromptInventory({
         </ConfirmDialog>
       )}
     </>
+  );
+}
+
+/**
+ * The tracker state knows earlier runs; answers arriving in the current run
+ * unlock a prompt before the state refreshes.
+ */
+export function promptHasResults(
+  prompt: AiPrompt,
+  rows: AiObservationRow[] | undefined,
+) {
+  return (
+    prompt.hasResults ||
+    !!rows?.some(
+      (row) => row.promptId === prompt.id && row.answerStatus === "answered",
+    )
   );
 }
 

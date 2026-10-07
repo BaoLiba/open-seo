@@ -39,7 +39,12 @@ export async function getTracker(input: {
   );
   // A run whose workflow stopped is failed here, so it never looks stuck.
   const runs = await Promise.all(recent.map((run) => reconcileAiRun(run)));
-  const observations = await repo.getObservationStatuses(runs.map((r) => r.id));
+  const [observations, answered] = await Promise.all([
+    repo.getObservationStatuses(runs.map((r) => r.id)),
+    config
+      ? repo.listAnsweredPromptIds(config.tracker.id)
+      : Promise.resolve<string[]>([]),
+  ]);
   const brands = project ? aiBrands(project, competitors) : [];
   const own = brands.find((b) => b.own);
   const capabilities = aiEngineSchema.options.map((engine) => ({
@@ -84,6 +89,7 @@ export async function getTracker(input: {
       paused: p.paused,
       archived: p.archived,
       branded: !!own && aiPromptIsBranded(p.text, own),
+      hasResults: answered.includes(p.id),
     })),
     brands,
     engines: trackerEngines(tracker),

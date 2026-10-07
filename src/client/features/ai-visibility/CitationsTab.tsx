@@ -37,10 +37,12 @@ export function CitationsTab({
   projectId,
   state,
   runId,
+  collecting,
 }: {
   projectId: string;
   state: AiTrackerState;
   runId: string | undefined;
+  collecting: boolean;
 }) {
   const [groupBy, setGroupBy] = useState<"url" | "domain">("url");
   const [ownership, setOwnership] = useState<
@@ -150,7 +152,9 @@ export function CitationsTab({
         />
       ) : !query.data.rows.length ? (
         <p className="p-10 text-center text-sm text-muted-foreground">
-          No citations match these filters.
+          {collecting
+            ? "Collecting answers. Cited pages appear here as answers arrive."
+            : "No citations match these filters."}
         </p>
       ) : (
         <SourcesTable

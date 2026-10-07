@@ -25,6 +25,8 @@ export interface AiPrompt {
   paused: boolean;
   archived: boolean;
   branded: boolean;
+  /** Whether any run has collected answer text for this prompt. */
+  hasResults: boolean;
 }
 export interface AiBrand {
   name: string;

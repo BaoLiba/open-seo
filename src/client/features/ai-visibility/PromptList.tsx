@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ExportMenu } from "@/client/components/ExportMenu";
 import { DataTableToolbar } from "@/client/components/table/DataTableToolbar";
+import { Alert, AlertDescription } from "@/client/components/ui/alert";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { exportAiVisibilityData } from "@/serverFunctions/ai-visibility";
@@ -11,13 +12,14 @@ import { safeHttpUrl } from "@/shared/safe-url";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { AiPrompt, AiRun, AiTrackerState } from "@/shared/ai-visibility";
 import type { AiTrackerPatch } from "@/types/schemas/ai-visibility";
-import { PromptInventory } from "./PromptInventory";
+import { PromptInventory, promptHasResults } from "./PromptInventory";
 import { AiQueryError, aiRunResultsQueryOptions } from "./shared";
 
 export function PromptList({
   projectId,
   state,
   currentRun,
+  collecting,
   onSetup,
   onEdit,
   onReduce,
@@ -27,6 +29,7 @@ export function PromptList({
   projectId: string;
   state: AiTrackerState;
   currentRun: AiRun | null;
+  collecting: boolean;
   onSetup: () => void;
   onEdit: (prompt: AiPrompt) => void;
   onReduce: (patch: AiTrackerPatch) => void;
@@ -97,6 +100,16 @@ export function PromptList({
           }}
         />
       )}
+      {/* Only before any prompt has results; rows gray out individually. */}
+      {!collecting &&
+        !prompts.some((prompt) => promptHasResults(prompt, results.data)) && (
+          <Alert variant="info" banner>
+            <Info />
+            <AlertDescription>
+              Run prompts before interacting with results.
+            </AlertDescription>
+          </Alert>
+        )}
       <PromptInventory
         projectId={projectId}
         prompts={prompts}

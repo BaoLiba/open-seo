@@ -139,7 +139,8 @@ export function AiResearchSetupGate({
               {failed ? "Try again" : "Start research"}
             </Button>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Research uses a small amount of usage credits.
+              Research and a first run of your prompts use a small amount of
+              usage credits.
             </p>
           </div>
         </CardContent>
