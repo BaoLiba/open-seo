@@ -36,18 +36,19 @@ const COLLECT_STEP = {
   timeout: "5 minutes" as const,
 };
 // Standard-queue answers usually arrive within minutes. Cumulative waits are
-// 2 / 4 / 7 / 10 / 15 / 20 / 30 / 45 / 60 minutes; anything still missing then
-// fails as not collected.
+// 2 / 4 / 7 / 10 / 14 / 18 / 22 / 26 / 30 minutes; anything still missing then
+// fails as not collected. Each sleep stays under 5 minutes, like rank check's:
+// the engine cancels an invocation idling in a longer sleep.
 const POLL_INTERVALS = [
   "2 minutes",
   "2 minutes",
   "3 minutes",
   "3 minutes",
-  "5 minutes",
-  "5 minutes",
-  "10 minutes",
-  "15 minutes",
-  "15 minutes",
+  "4 minutes",
+  "4 minutes",
+  "4 minutes",
+  "4 minutes",
+  "4 minutes",
 ] as const;
 
 export class AiVisibilityWorkflow extends WorkflowEntrypoint<
@@ -70,6 +71,17 @@ export class AiVisibilityWorkflow extends WorkflowEntrypoint<
           ),
       );
     const { runId, customer } = payload;
+    const markFailed = async (error: unknown) => {
+      await pgStep(step, "mark-failed", SINGLE_ATTEMPT, () =>
+        markAiRunFailed(runId, error),
+      );
+      throw error;
+    };
+    const failRun = (error: unknown) => {
+      console.error(`[ai-visibility] ${runId} failed:`, error);
+      return markFailed(error);
+    };
+    let pending: AiPendingTask[] = [];
     try {
       const { market, batches } = await pgStep(
         step,
@@ -77,38 +89,45 @@ export class AiVisibilityWorkflow extends WorkflowEntrypoint<
         SINGLE_ATTEMPT,
         () => prepareAiRun(runId, customer),
       );
-      let pending: AiPendingTask[] = [];
       for (const [index, batch] of batches.entries())
         pending.push(
           ...(await pgStep(step, `post-${index}`, SINGLE_ATTEMPT, () =>
             postAiBatch(runId, customer, market, batch),
           )),
         );
-      for (
-        let round = 0;
-        round < POLL_INTERVALS.length && pending.length > 0;
-        round++
-      ) {
+    } catch (error) {
+      return failRun(error);
+    }
+    for (
+      let round = 0;
+      round < POLL_INTERVALS.length && pending.length > 0;
+      round++
+    ) {
+      try {
         await step.sleep(`wait-${round}`, POLL_INTERVALS[round]);
-        const remaining = pending;
-        try {
-          pending = await pgStep(step, `collect-${round}`, COLLECT_STEP, () =>
-            collectAiRound(runId, remaining),
-          );
-        } catch (error) {
-          // Posted tasks are already paid for; keep polling them next round.
-          console.warn(`[ai-visibility] ${runId} collect-${round}:`, error);
-        }
+      } catch (error) {
+        // The engine cancels an invocation idling in a long sleep, which
+        // rejects it here, then resumes the instance on wake. That interrupt
+        // never runs mark-failed, so only a real failure fails the run. Don't
+        // log it as one.
+        return markFailed(error);
       }
+      const remaining = pending;
+      try {
+        pending = await pgStep(step, `collect-${round}`, COLLECT_STEP, () =>
+          collectAiRound(runId, remaining),
+        );
+      } catch (error) {
+        // Posted tasks are already paid for; keep polling them next round.
+        console.warn(`[ai-visibility] ${runId} collect-${round}:`, error);
+      }
+    }
+    try {
       await pgStep(step, "finalize", SINGLE_ATTEMPT, () =>
         finalizeAiRun(runId),
       );
     } catch (error) {
-      console.error(`[ai-visibility] ${runId} failed:`, error);
-      await pgStep(step, "mark-failed", SINGLE_ATTEMPT, () =>
-        markAiRunFailed(runId, error),
-      );
-      throw error;
+      return failRun(error);
     }
   }
 }

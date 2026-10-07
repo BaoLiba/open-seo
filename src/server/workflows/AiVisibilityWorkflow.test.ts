@@ -97,4 +97,13 @@ describe("AI visibility workflow", () => {
     expect(mocks.post).not.toHaveBeenCalled();
     expect(mocks.markFailed).toHaveBeenCalledExactlyOnceWith("run", error);
   });
+
+  it("does not log a rejected poll sleep as a failure, but still marks the run failed", async () => {
+    const error = new Error();
+    mocks.sleep.mockRejectedValueOnce(error);
+    const consoleError = vi.spyOn(console, "error");
+    await expect(execute()).rejects.toThrow(error);
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(mocks.markFailed).toHaveBeenCalledExactlyOnceWith("run", error);
+  });
 });
