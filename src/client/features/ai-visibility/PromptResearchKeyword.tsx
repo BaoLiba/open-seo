@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
 import { SkeletonTableRows } from "@/client/components/SkeletonPresets";
 import { Button } from "@/client/components/ui/button";
 import { researchAiVisibilityPrompts } from "@/serverFunctions/ai-visibility";
@@ -54,26 +52,10 @@ export function PromptResearchKeyword({
     });
   };
   return (
-    <div className="space-y-5 pt-1">
-      <div>
-        <Button
-          variant="ghost"
-          size="sm"
-          nativeButton={false}
-          render={
-            <Link
-              to="/p/$projectId/ai-visibility/research"
-              params={{ projectId }}
-            />
-          }
-        >
-          <ArrowLeft /> Back
-        </Button>
-      </div>
-      <h1 className="text-2xl font-semibold tracking-tight">{keyword}</h1>
+    <>
       <div className="overflow-hidden rounded-lg border bg-card border-border">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 border-border">
-          <h2 className="font-medium">Prompts</h2>
+          <h2 className="font-medium">Prompts about “{keyword}”</h2>
           <Button size="sm" disabled={!selected.size} onClick={track}>
             Track selected{selected.size ? ` (${selected.size})` : ""}
           </Button>
@@ -120,6 +102,6 @@ export function PromptResearchKeyword({
           }}
         />
       )}
-    </div>
+    </>
   );
 }

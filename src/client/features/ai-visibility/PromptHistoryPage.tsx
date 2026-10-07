@@ -46,11 +46,13 @@ export function PromptHistoryPage({
       prefetchRunNowCost(queryClient, projectId, tracker, [promptId]);
   }, [queryClient, projectId, promptId, tracker]);
   return (
-    <div className="space-y-5 pt-1">
-      <BackLink to="/p/$projectId/ai-visibility" params={{ projectId }}>
-        All tracked prompts
-      </BackLink>
+    <div className="space-y-4">
       <PageHeader
+        backLink={
+          <BackLink to="/p/$projectId/ai-visibility" params={{ projectId }}>
+            All tracked prompts
+          </BackLink>
+        }
         title={
           <span className="whitespace-pre-wrap" data-ph-mask>
             {prompt?.text ?? retainedPrompt ?? "Prompt analysis"}

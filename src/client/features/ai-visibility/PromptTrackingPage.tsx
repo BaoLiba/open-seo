@@ -170,7 +170,7 @@ function PromptTrackingContent({
   );
 
   return (
-    <div className="space-y-5 pt-1">
+    <div className="space-y-4">
       <PageHeader
         title="Prompt Tracking"
         description="Track the prompts your customers use with AI. Inspect where your business is mentioned or cited."
