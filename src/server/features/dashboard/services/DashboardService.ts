@@ -32,6 +32,8 @@ export type DashboardAuditSummary = {
   id: string;
   status: "running" | "completed" | "failed";
   pagesCrawled: number;
+  // The crawl's page limit; small sites finish below it.
+  pagesTotal: number;
   startedAt: string;
   // Top issue types by severity then affected-page count, for the card's list.
   topIssues: {
@@ -128,6 +130,7 @@ async function getAuditSummary(
     id: audit.id,
     status: audit.status,
     pagesCrawled: audit.pagesCrawled,
+    pagesTotal: audit.pagesTotal,
     startedAt: audit.startedAt,
     topIssues: sorted.slice(0, 3),
   };

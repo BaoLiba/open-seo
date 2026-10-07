@@ -1,4 +1,3 @@
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { projectsQueryOptions } from "@/client/features/projects/projectQueries";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +13,7 @@ import {
   clearLastProjectId,
   getLastProjectId,
 } from "@/client/lib/active-project";
+import { toastInitialAudit } from "@/client/features/projects/initialAuditToast";
 import { archiveProject, updateProject } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "./types";
 
@@ -72,14 +72,7 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
         queryKey: ["dashboardOverview", project.id],
       });
       toast.success("Project updated");
-      if (saved.initialAudit?.status === "unavailable")
-        toast.warning("Website saved. The first scan could not start.", {
-          description: getStandardErrorMessage(
-            new Error(saved.initialAudit.code),
-          ),
-        });
-      else if (saved.initialAudit?.status === "started")
-        toast.success("Your 50-page site scan is running");
+      toastInitialAudit(saved.initialAudit);
     },
   });
 

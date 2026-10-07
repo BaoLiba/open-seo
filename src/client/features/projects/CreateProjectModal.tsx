@@ -24,6 +24,7 @@ import {
   getLanguageCode,
 } from "@/client/features/keywords/locations";
 import { ProjectMarketFields } from "@/client/features/projects/ProjectMarketFields";
+import { toastInitialAudit } from "@/client/features/projects/initialAuditToast";
 import { createProject } from "@/serverFunctions/projects";
 
 const createProjectSchema = z.object({
@@ -65,14 +66,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       });
       onClose();
       toast.success("Project created");
-      if (created.initialAudit?.status === "unavailable")
-        toast.warning("Website saved. The first scan could not start.", {
-          description: getStandardErrorMessage(
-            new Error(created.initialAudit.code),
-          ),
-        });
-      else if (created.initialAudit?.status === "started")
-        toast.success("Your 50-page site scan is running");
+      toastInitialAudit(created.initialAudit);
       // Continue setup through the new project’s dashboard.
       void navigate({
         to: "/p/$projectId",

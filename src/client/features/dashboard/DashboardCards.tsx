@@ -3,6 +3,7 @@ import { startAudit } from "@/serverFunctions/audit";
 import { QueryError } from "@/client/components/QueryState";
 import { LoaderCircle, ScanSearch } from "lucide-react";
 import { CardShell } from "@/client/components/CardShell";
+import { Progress } from "@/client/components/ui/progress";
 import { Button } from "@/client/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -211,6 +212,39 @@ export function AuditHealthCard({
       </CardShell>
     );
 
+  if (audit.status === "running")
+    // A running crawl has at most a partial issue list, and an empty one is
+    // not the same as a healthy site, so show progress instead.
+    return (
+      <CardShell
+        title="Site health"
+        action={
+          <Link
+            to="/p/$projectId/audit"
+            params={{ projectId }}
+            search={{ auditId: audit.id }}
+            className={moreDetailsClass}
+          >
+            View progress
+          </Link>
+        }
+      >
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
+          <LoaderCircle className="size-7 animate-spin text-muted-foreground" />
+          <h3 className="font-medium">Scanning your website</h3>
+          <Progress
+            className="w-full max-w-xs"
+            value={audit.pagesCrawled}
+            max={audit.pagesTotal || 1}
+            aria-label="Pages checked"
+          />
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {audit.pagesCrawled} of up to {audit.pagesTotal} pages checked
+          </p>
+        </div>
+      </CardShell>
+    );
+
   return (
     <CardShell
       title="Site health"
@@ -225,7 +259,7 @@ export function AuditHealthCard({
         </Link>
       }
     >
-      {audit.status !== "completed" && audit.status !== "running" && (
+      {audit.status === "failed" && (
         <p className="mb-4 text-sm text-destructive">
           The latest scan didn’t finish. Review the results or try again.
         </p>
@@ -235,14 +269,7 @@ export function AuditHealthCard({
           {audit.pagesCrawled} pages checked · {formatDay(audit.startedAt)}
         </p>
       )}
-      {audit.status === "running" ? (
-        // A running crawl has at most a partial issue list, and an empty one
-        // is not the same as a healthy site.
-        <p className="text-sm text-muted-foreground">
-          <LoaderCircle className="mb-3 size-6 animate-spin" />
-          Scanning your website… {audit.pagesCrawled} pages checked.
-        </p>
-      ) : audit.topIssues.length === 0 ? (
+      {audit.topIssues.length === 0 ? (
         audit.status === "completed" ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Check className="size-4 text-success" />
