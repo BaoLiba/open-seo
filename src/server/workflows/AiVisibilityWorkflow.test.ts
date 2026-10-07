@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
   post: vi.fn(),
   live: vi.fn(),
+  model: vi.fn(),
   collect: vi.fn(),
   finalize: vi.fn(),
   markFailed: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock(
     prepareAiRun: mocks.prepare,
     postAiBatch: mocks.post,
     collectAiLiveBatch: mocks.live,
+    collectAiModelBatch: mocks.model,
     collectAiRound: mocks.collect,
     finalizeAiRun: mocks.finalize,
     markAiRunFailed: mocks.markFailed,
@@ -63,6 +65,7 @@ function execute() {
 beforeEach(() => {
   mocks.prepare.mockResolvedValue({
     market: { locationCode: 2840, languageCode: "en" },
+    modelBatches: [],
     live: false,
     batches: [
       { engine: "chatgpt", tasks: [] },
@@ -86,9 +89,27 @@ describe("AI visibility workflow", () => {
     expect(mocks.finalize).toHaveBeenCalledExactlyOnceWith("run");
   });
 
+  it("asks the model API for Claude and Perplexity, then reads queued answers before sleeping", async () => {
+    mocks.prepare.mockResolvedValue({
+      market: { locationCode: 2840, languageCode: "en" },
+      modelBatches: [{ engine: "claude", tasks: [] }],
+      live: false,
+      batches: [{ engine: "chatgpt", tasks: [] }],
+    });
+    await execute();
+    expect(mocks.model).toHaveBeenCalledOnce();
+    expect(mocks.steps).toHaveBeenCalledWith("collect-model-0", {
+      retries: { limit: 2, delay: "10 seconds" },
+      timeout: "5 minutes",
+    });
+    expect(mocks.sleep).not.toHaveBeenCalled();
+    expect(mocks.finalize).toHaveBeenCalledExactlyOnceWith("run");
+  });
+
   it("collects a manual run's live batches without posting or polling", async () => {
     mocks.prepare.mockResolvedValue({
       market: { locationCode: 2840, languageCode: "en" },
+      modelBatches: [],
       live: true,
       batches: [[]],
     });

@@ -135,6 +135,15 @@ const LLM_RESPONSE_USD: Record<
   perplexity: { webSearch: 0.04, noSearch: 0.04 },
 };
 
+/** Estimated USD for one live LLM response at the 4096-token output cap. */
+export function llmResponseUsd(
+  modelSlug: LlmResponseModelSlug,
+  webSearch: boolean,
+): number {
+  const price = LLM_RESPONSE_USD[modelSlug];
+  return webSearch ? price.webSearch : price.noSearch;
+}
+
 // SERP Google Maps and Local Finder, live. measured: Maps bills one request
 // through depth 100 ($0.002 at depth 20 and 100), and no caller asks for
 // more. Local Finder bills every page of 10 at the first-page rate ($0.02 at
@@ -307,11 +316,11 @@ export const dataforseoPricing = {
       fetchAiTrackingLiveAnswer,
       () => AI_LIVE_RECORD_COST_USD,
     ),
-    llmResponse: priced(fetchLlmResponse, (input) => {
-      const price = LLM_RESPONSE_USD[input.modelSlug];
-      return (input.webSearch ?? LLM_RESPONSE_WEB_SEARCH_DEFAULT)
-        ? price.webSearch
-        : price.noSearch;
-    }),
+    llmResponse: priced(fetchLlmResponse, (input) =>
+      llmResponseUsd(
+        input.modelSlug,
+        input.webSearch ?? LLM_RESPONSE_WEB_SEARCH_DEFAULT,
+      ),
+    ),
   },
 } as const;

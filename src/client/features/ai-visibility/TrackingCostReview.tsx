@@ -226,7 +226,8 @@ export function TrackingCostReview({
                 {aiMoney(runCostUsd)}
               </span>
               <FieldDescription>
-                {`${cost.observations} ${cost.observations === 1 ? "answer" : "answers"} × ${aiMoney(cost.observations ? runCostUsd / cost.observations : 0)}${mode === "schedule" ? ` · about ${aiMoney(cost.monthlyCostUsd)} a month (${cost.checksPerMonth} ${cost.checksPerMonth === 1 ? "run" : "runs"})` : " · live answers, ready in a few minutes"}`}
+                {/* No per-answer price: engines cost different amounts. */}
+                {`${cost.observations} ${cost.observations === 1 ? "answer" : "answers"}${mode === "schedule" ? ` · about ${aiMoney(cost.monthlyCostUsd)} a month (${cost.checksPerMonth} ${cost.checksPerMonth === 1 ? "run" : "runs"})` : " · live answers, ready in a few minutes"}`}
               </FieldDescription>
             </Field>
             {start.error && <AiQueryError error={start.error} />}

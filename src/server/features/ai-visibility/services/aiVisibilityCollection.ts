@@ -7,13 +7,23 @@ import {
   type AiTrackingAnswer,
   type PostedAiTrackingTask,
 } from "@/server/lib/dataforseo";
+import { resolveLatestLlmModelName } from "@/server/lib/dataforseo/llm-models";
 import { AppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
-import type { AiBrand, AiEngine } from "@/shared/ai-visibility";
+import { getIsoCountryCode } from "@/shared/keyword-locations";
+import {
+  aiEngineUsesModelApi,
+  type AiBrand,
+  type AiEngine,
+} from "@/shared/ai-visibility";
 import { AiVisibilityRepository as repo } from "../repositories/AiVisibilityRepository";
-import { parseDataforseoAnswer } from "../providers/dataforseoEvidence";
+import {
+  parseDataforseoAnswer,
+  parseLlmResponseAnswer,
+  type ParsedAiAnswer,
+} from "../providers/dataforseoEvidence";
 import { aiBrands } from "./aiVisibilityConfiguration";
-import { aiCostForCount } from "./aiVisibilityCost";
+import { aiCostForAnswers } from "./aiVisibilityCost";
 import { matchAiBrand } from "./aiVisibilityMatching";
 import { failAiRun } from "./aiVisibilityRuns";
 
@@ -22,7 +32,7 @@ import { failAiRun } from "./aiVisibilityRuns";
 
 interface AiTaskBatch {
   engine: AiEngine;
-  /** Tag = answer row id. At most 100 per task_post. */
+  /** Tag = answer row id. At most 100 per task_post, 6 per model batch. */
   tasks: { tag: string; prompt: string }[];
 }
 /** One live answer. A live step mixes engines, so each task names its own. */
@@ -44,16 +54,17 @@ interface AiRunMarket {
 const LIVE_ANSWERS_PER_STEP = 6;
 
 /**
- * Marks the run running and groups its answers into batches. Manual runs
- * collect live answers so the user sees results sooner. Scheduled and
- * baseline runs use the cheaper standard queue. Hosted runs first check that
- * credits cover the whole check, like rank checks.
+ * Marks the run running and groups its answers into batches. Manual and
+ * baseline runs collect live answers so the user sees results sooner.
+ * Scheduled runs use the cheaper standard queue. Claude and Perplexity have no
+ * LLM Scraper, so every run asks their model API (`modelBatches`). Hosted runs
+ * first check that credits cover the whole check, like rank checks.
  */
 export async function prepareAiRun(
   runId: string,
   customer: BillingCustomerContext,
 ): Promise<
-  { market: AiRunMarket } & (
+  { market: AiRunMarket; modelBatches: AiTaskBatch[] } & (
     | { live: false; batches: AiTaskBatch[] }
     | { live: true; batches: AiLiveTask[][] }
   )
@@ -61,13 +72,13 @@ export async function prepareAiRun(
   const run = await repo.getRunInternal(runId);
   if (!run || (run.status !== "queued" && run.status !== "running"))
     throw new AppError("NOT_FOUND", `Run ${runId} is no longer active.`);
-  const answers = (await repo.getObservations([runId])).filter(
+  const pending = (await repo.getObservations([runId])).filter(
     (row) => row.status === "pending",
   );
-  const live = run.trigger === "manual";
+  const live = run.trigger !== "scheduled";
   if (await isHostedServerAuthMode()) {
-    const required = aiCostForCount(
-      answers.length,
+    const required = aiCostForAnswers(
+      pending.map((row) => row.engine),
       true,
       live ? "live" : "queued",
     ).costCredits;
@@ -83,6 +94,11 @@ export async function prepareAiRun(
     locationCode: run.locationCode,
     languageCode: run.languageCode,
   };
+  const modelBatches = engineBatches(
+    pending.filter((row) => aiEngineUsesModelApi(row.engine)),
+    LIVE_ANSWERS_PER_STEP,
+  );
+  const answers = pending.filter((row) => !aiEngineUsesModelApi(row.engine));
   if (live) {
     const tasks = answers.map((row) => ({
       tag: row.id,
@@ -92,17 +108,30 @@ export async function prepareAiRun(
     const batches: AiLiveTask[][] = [];
     for (let i = 0; i < tasks.length; i += LIVE_ANSWERS_PER_STEP)
       batches.push(tasks.slice(i, i + LIVE_ANSWERS_PER_STEP));
-    return { market, live, batches };
+    return { market, modelBatches, live, batches };
   }
+  return {
+    market,
+    modelBatches,
+    live,
+    batches: engineBatches(answers, MAX_TASKS_PER_POST),
+  };
+}
+
+/** Groups answers by engine into batches of at most `size`. */
+function engineBatches(
+  answers: { id: string; prompt: string; engine: AiEngine }[],
+  size: number,
+): AiTaskBatch[] {
   const batches: AiTaskBatch[] = [];
   for (const engine of new Set(answers.map((row) => row.engine))) {
     const tasks = answers
       .filter((row) => row.engine === engine)
       .map((row) => ({ tag: row.id, prompt: row.prompt }));
-    for (let i = 0; i < tasks.length; i += MAX_TASKS_PER_POST)
-      batches.push({ engine, tasks: tasks.slice(i, i + MAX_TASKS_PER_POST) });
+    for (let i = 0; i < tasks.length; i += size)
+      batches.push({ engine, tasks: tasks.slice(i, i + size) });
   }
-  return { market, live, batches };
+  return batches;
 }
 
 /**
@@ -180,6 +209,57 @@ export async function collectAiLiveBatch(
   }
 }
 
+/**
+ * Asks each prompt of a Claude or Perplexity batch through the metered model
+ * API client, which bills each answer, and saves each answer as soon as it
+ * arrives, so a slow call that hits the step timeout cannot discard answers
+ * already paid for. Model answers have no language setting: only the country
+ * guides the web search.
+ */
+export async function collectAiModelBatch(
+  runId: string,
+  customer: BillingCustomerContext,
+  market: AiRunMarket,
+  batch: AiTaskBatch,
+): Promise<void> {
+  const modelSlug = batch.engine;
+  if (!aiEngineUsesModelApi(modelSlug))
+    throw new AppError("INTERNAL_ERROR", `${modelSlug} has no model API batch`);
+  const brands = await runBrands(runId);
+  if (!brands) return;
+  const client = createDataforseoClient(customer);
+  const modelName = await resolveLatestLlmModelName(modelSlug);
+  const country = getIsoCountryCode(market.locationCode).toUpperCase();
+  await Promise.all(
+    batch.tasks.map(async (task) => {
+      try {
+        const result = await client.aiSearch.llmResponse({
+          modelSlug,
+          modelName,
+          userPrompt: task.prompt,
+          webSearch: true,
+          // Saving the tracker rejects countries the engine cannot search.
+          webSearchCountryCode: country,
+          maxOutputTokens: MODEL_MAX_OUTPUT_TOKENS,
+        });
+        await saveAiAnswer(task.tag, parseLlmResponseAnswer(result), brands);
+      } catch (cause) {
+        await repo.failPendingObservations(
+          runId,
+          cause instanceof Error ? cause.message : String(cause),
+          [task.tag],
+        );
+      }
+    }),
+  );
+}
+
+/**
+ * Like Prompt Explorer: reasoning models count hidden reasoning against this
+ * budget, and a smaller one can leave the visible answer empty.
+ */
+const MODEL_MAX_OUTPUT_TOKENS = 4096;
+
 /** Concurrent task_get requests within a collect step. */
 const TASK_GET_CONCURRENCY = 25;
 
@@ -240,8 +320,17 @@ async function saveAiOutcome(
     );
     return;
   }
+  await saveAiAnswer(task.tag, answer, brands);
+}
+
+/** Saves one answer with its citations and brand results. */
+async function saveAiAnswer(
+  observationId: string,
+  answer: ParsedAiAnswer,
+  brands: AiBrand[],
+) {
   await repo.persistAnswer({
-    observationId: task.tag,
+    observationId,
     values: {
       status: "completed",
       collectedAt: answer.collectedAt ?? new Date().toISOString(),
@@ -250,12 +339,12 @@ async function saveAiOutcome(
     },
     sources: answer.citations.map((citation) => ({
       id: crypto.randomUUID(),
-      observationId: task.tag,
+      observationId,
       ...citation,
     })),
     matches: brands.map((brand) => ({
       id: crypto.randomUUID(),
-      observationId: task.tag,
+      observationId,
       ...brand,
       ...matchAiBrand(answer, brand),
     })),

@@ -7,18 +7,32 @@ import {
   type DataforseoTaskLike,
 } from "@/server/lib/dataforseo/envelope";
 import { AppError } from "@/server/lib/errors";
-import type { AiEngine } from "@/shared/ai-visibility";
+import {
+  aiEngineUsesModelApi,
+  type AiEngine,
+  type AiModelApiEngine,
+} from "@/shared/ai-visibility";
 
 // AI visibility tracking endpoints. Scheduled runs use the standard queue:
 // task_post, then a free task_get/advanced by task ID. Manual runs use
 // live/advanced, one prompt per call.
 // https://docs.dataforseo.com/v3/ai_optimization/chat_gpt/llm_scraper/overview/
 // https://docs.dataforseo.com/v3/serp/google/organic/overview/
-const AI_TRACKING_ENDPOINTS: Record<AiEngine, string> = {
+const AI_TRACKING_ENDPOINTS: Record<
+  Exclude<AiEngine, AiModelApiEngine>,
+  string
+> = {
   chatgpt: "/v3/ai_optimization/chat_gpt/llm_scraper",
   gemini: "/v3/ai_optimization/gemini/llm_scraper",
   google_ai_overview: "/v3/serp/google/organic",
 };
+
+/** Live engines have no LLM Scraper: their answers come from the live API. */
+function trackingEndpoint(engine: AiEngine): string {
+  if (aiEngineUsesModelApi(engine))
+    throw new AppError("INTERNAL_ERROR", `${engine} answers cannot be queued`);
+  return AI_TRACKING_ENDPOINTS[engine];
+}
 
 interface AiTrackingTaskInput {
   /** Echoed back by DataForSEO; maps a task to its answer row. */
@@ -88,7 +102,7 @@ export async function postAiTrackingTasks(
       `task_post accepts 1-${MAX_TASKS_PER_POST} tasks, got ${input.tasks.length}`,
     );
   }
-  const endpoint = AI_TRACKING_ENDPOINTS[input.engine];
+  const endpoint = trackingEndpoint(input.engine);
   const response = await dataforseoPost<
     DataforseoTaskLike & { id?: string; data?: Record<string, unknown> }
   >(
@@ -142,7 +156,7 @@ export async function fetchAiTrackingTaskResult(input: {
   taskId: string;
 }): Promise<AiTrackingTaskOutcome> {
   const response = await dataforseoGet(
-    `${AI_TRACKING_ENDPOINTS[input.engine]}/task_get/advanced/${encodeURIComponent(input.taskId)}`,
+    `${trackingEndpoint(input.engine)}/task_get/advanced/${encodeURIComponent(input.taskId)}`,
   );
   const task = response?.tasks?.[0];
   if (!response || response.status_code !== 20000 || !task) {
@@ -180,7 +194,7 @@ export async function fetchAiTrackingLiveAnswer(
     task: AiTrackingTaskInput;
   },
 ): Promise<DataforseoApiResponse<AiTrackingAnswer>> {
-  const endpoint = `${AI_TRACKING_ENDPOINTS[input.engine]}/live/advanced`;
+  const endpoint = `${trackingEndpoint(input.engine)}/live/advanced`;
   const response = await dataforseoPost<
     DataforseoTaskLike & { result?: unknown[] | null }
   >(endpoint, [aiTrackingTaskBody(input.engine, input, input.task)], {

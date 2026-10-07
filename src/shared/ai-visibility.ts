@@ -1,14 +1,33 @@
 import {
+  getIsoCountryCode,
   LOCATION_OPTIONS,
   SERP_LANGUAGE_OPTIONS,
 } from "@/shared/keyword-locations";
+import { supportsWebSearchCountry } from "@/shared/prompt-search-countries";
 
-export type AiEngine = "chatgpt" | "gemini" | "google_ai_overview";
+export type AiEngine =
+  | "chatgpt"
+  | "gemini"
+  | "google_ai_overview"
+  | "claude"
+  | "perplexity";
 export const AI_ENGINE_LABELS: Record<AiEngine, string> = {
   chatgpt: "ChatGPT",
   gemini: "Gemini",
   google_ai_overview: "Google AI Overviews",
+  claude: "Claude",
+  perplexity: "Perplexity",
 };
+/**
+ * Engines DataForSEO has no LLM Scraper for. Their answers come from the live
+ * LLM Responses API, at live API pricing. Each name is also its API model slug.
+ */
+export type AiModelApiEngine = Extract<AiEngine, "claude" | "perplexity">;
+export function aiEngineUsesModelApi(
+  engine: AiEngine,
+): engine is AiModelApiEngine {
+  return engine === "claude" || engine === "perplexity";
+}
 /**
  * Raw DataForSEO USD for one answer, standard queue. AI Overviews is one
  * organic SERP page ($0.0006) plus the async overview load ($0.0006).
@@ -56,6 +75,8 @@ export interface AiCapability {
   unsupportedLocationCodes: number[];
   maxPromptLength: number;
   note: string;
+  /** Every run asks the model's API, at live API pricing. */
+  modelApi: boolean;
 }
 export interface AiRun {
   id: string;
@@ -281,7 +302,20 @@ export const AI_UNSUPPORTED_LOCATIONS: Record<AiEngine, readonly number[]> = {
   chatgpt: [2275],
   gemini: [],
   google_ai_overview: [],
+  claude: liveUnsupportedLocations("claude"),
+  perplexity: liveUnsupportedLocations("perplexity"),
 };
+
+/** Countries a live engine's web search does not accept. */
+function liveUnsupportedLocations(engine: AiModelApiEngine): number[] {
+  return LOCATION_OPTIONS.filter(
+    (option) =>
+      !supportsWebSearchCountry(
+        engine,
+        getIsoCountryCode(option.code).toUpperCase(),
+      ),
+  ).map((option) => option.code);
+}
 
 /** "In progress" while a collection is unfinished. */
 export function aiObservationStatusLabel(status: AiObservationStatus): string {

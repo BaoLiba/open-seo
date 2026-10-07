@@ -41,8 +41,8 @@ export function aiRunView(
     pending: observations.length - completed - failed,
     createdAt: run.createdAt,
     completedAt: run.completedAt,
-    // Manual runs collect live answers, which arrive within seconds.
-    pollAfterSeconds: run.trigger === "manual" ? 5 : 20,
+    // Manual and baseline runs collect live answers, which arrive within seconds.
+    pollAfterSeconds: run.trigger === "scheduled" ? 20 : 5,
   };
 }
 

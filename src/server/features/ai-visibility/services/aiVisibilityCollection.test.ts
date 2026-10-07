@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { projectCompetitors } from "@/db/schema";
+import { aiObservations, projectCompetitors } from "@/db/schema";
 import { AiVisibilityRepository as repo } from "../repositories/AiVisibilityRepository";
 import {
   collectAiLiveBatch,
+  collectAiModelBatch,
   collectAiRound,
   finalizeAiRun,
   postAiBatch,
@@ -18,6 +19,7 @@ const { testDb, dataforseo } = await vi.hoisted(async () => {
       trackingTaskPost: vi.fn(),
       trackingLiveBatch: vi.fn(),
       fetchTaskResult: vi.fn(),
+      llmResponse: vi.fn(),
     },
   };
 });
@@ -33,9 +35,13 @@ vi.mock("@/server/lib/dataforseo", () => ({
     aiSearch: {
       trackingTaskPost: dataforseo.trackingTaskPost,
       trackingLiveBatch: dataforseo.trackingLiveBatch,
+      llmResponse: dataforseo.llmResponse,
     },
   }),
   fetchAiTrackingTaskResult: dataforseo.fetchTaskResult,
+}));
+vi.mock("@/server/lib/dataforseo/llm-models", () => ({
+  resolveLatestLlmModelName: async () => "claude-sonnet-5",
 }));
 
 const runId = "run";
@@ -142,6 +148,102 @@ describe("AI answer collection", () => {
     expect(await repo.getObservation("answer-1")).toMatchObject({
       status: "failed",
     });
+  });
+
+  it("saves each model answer without waiting for slower calls", async () => {
+    dataforseo.llmResponse.mockImplementation(
+      ({ userPrompt }: { userPrompt: string }) =>
+        userPrompt === "Best rank tracker?"
+          ? new Promise(() => {})
+          : Promise.resolve({ items: [] }),
+    );
+
+    void collectAiModelBatch(runId, customer, market, {
+      engine: "claude",
+      tasks: [
+        { tag: "answer-0", prompt: "Which SEO tools?" },
+        { tag: "answer-1", prompt: "Best rank tracker?" },
+      ],
+    });
+
+    await vi.waitFor(async () =>
+      expect(await repo.getObservation("answer-0")).toMatchObject({
+        status: "completed",
+      }),
+    );
+    expect(await repo.getObservation("answer-1")).toMatchObject({
+      status: "pending",
+    });
+  });
+
+  it("saves model answers with their cited pages and fails the calls that error", async () => {
+    dataforseo.llmResponse.mockImplementation(
+      async ({ userPrompt }: { userPrompt: string }) => {
+        if (userPrompt === "Best rank tracker?") throw new Error("Timed out");
+        return {
+          items: [
+            {
+              type: "message",
+              sections: [
+                {
+                  text: "Try OpenSEO.",
+                  annotations: [
+                    { url: "https://openseo.so/", title: "OpenSEO" },
+                  ],
+                },
+              ],
+            },
+          ],
+        };
+      },
+    );
+
+    await collectAiModelBatch(runId, customer, market, {
+      engine: "claude",
+      tasks: [
+        { tag: "answer-0", prompt: "Which SEO tools?" },
+        { tag: "answer-1", prompt: "Best rank tracker?" },
+      ],
+    });
+
+    expect(dataforseo.llmResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelSlug: "claude",
+        webSearch: true,
+        webSearchCountryCode: "US",
+      }),
+    );
+    expect(await repo.getObservation("answer-0")).toMatchObject({
+      status: "completed",
+      answerMarkdown: "Try OpenSEO.",
+    });
+    expect((await repo.getEvidence(["answer-0"])).sources).toMatchObject([
+      { url: "https://openseo.so/", domain: "openseo.so" },
+    ]);
+    expect(await repo.getObservation("answer-1")).toMatchObject({
+      status: "failed",
+      error: "Timed out",
+    });
+  });
+
+  it("sends Claude to the model API, not the live scraper, on a manual run", async () => {
+    const [{ promptId }] = await repo.getObservations([runId]);
+    await testDb.db.insert(aiObservations).values({
+      id: "answer-claude",
+      runId,
+      promptId,
+      engine: "claude",
+      branded: false,
+    });
+
+    const plan = await prepareAiRun(runId, customer);
+
+    expect(plan.modelBatches).toMatchObject([
+      { engine: "claude", tasks: [{ tag: "answer-claude" }] },
+    ]);
+    expect(plan.batches.flat()).not.toContainEqual(
+      expect.objectContaining({ engine: "claude" }),
+    );
   });
 
   it("collects a manual run live, saving answers and failing rejected calls", async () => {

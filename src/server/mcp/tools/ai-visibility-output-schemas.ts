@@ -59,6 +59,7 @@ export const aiTrackerOutput = z.looseObject({
       unsupportedLocationCodes: z.array(count),
       maxPromptLength: count,
       note: text,
+      modelApi: flag,
     }),
   ),
   recentRuns: z.array(aiRunOutput),

@@ -5,6 +5,8 @@ export const aiEngineSchema = z.enum([
   "chatgpt",
   "gemini",
   "google_ai_overview",
+  "claude",
+  "perplexity",
 ]);
 export const aiProjectSchema = z.object({ projectId: z.string().uuid() });
 const topicSchema = z.string().trim().min(1).max(100);
