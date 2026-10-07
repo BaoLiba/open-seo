@@ -1,10 +1,22 @@
-import { Fragment, useEffect, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/client/components/ui/tabs";
+import { DashboardKeywords } from "./DashboardKeywords";
+import { DashboardBacklinks } from "./DashboardBacklinks";
+import { DashboardNewQueries } from "./DashboardNewQueries";
+import { DashboardLinkActivity } from "./DashboardLinkActivity";
+import { dashboardSiteTabSchema } from "@/types/schemas/dashboard";
+import type { z } from "zod";
+import { Fragment } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { sort } from "remeda";
 import { DashboardOnboarding } from "./DashboardOnboarding";
 import {
   AuditHealthCard,
-  BacklinkPulseCard,
   GscCard,
 } from "@/client/features/dashboard/DashboardCards";
 import { Ga4Card } from "@/client/features/dashboard/Ga4Card";
@@ -13,13 +25,18 @@ import { QueryError } from "@/client/components/QueryState";
 import {
   getDashboardActivation,
   getDashboardOverview,
-  refreshDashboardBacklinkSnapshot,
 } from "@/serverFunctions/dashboard";
 import { Skeleton } from "@/client/components/ui/skeleton";
 
-export function DashboardPage({ projectId }: { projectId: string }) {
-  const queryClient = useQueryClient();
-
+export function DashboardPage({
+  projectId,
+  tab = "overview",
+  onTabChange,
+}: {
+  projectId: string;
+  tab?: z.infer<typeof dashboardSiteTabSchema>;
+  onTabChange: (tab: z.infer<typeof dashboardSiteTabSchema>) => void;
+}) {
   const activationQuery = useQuery({
     queryKey: ["dashboardActivation", projectId],
     queryFn: () => getDashboardActivation({ data: { projectId } }),
@@ -33,27 +50,6 @@ export function DashboardPage({ projectId }: { projectId: string }) {
 
   const activation = activationQuery.data;
   const overview = overviewQuery.data;
-
-  // Visit-triggered backlink snapshot: fire once per page view when the
-  // overview reports a missing or stale snapshot for a project with a domain.
-  // The server re-checks freshness, so a stray double-fire costs nothing.
-  const refreshMutation = useMutation({
-    mutationFn: () => refreshDashboardBacklinkSnapshot({ data: { projectId } }),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({
-        queryKey: ["dashboardOverview", projectId],
-      }),
-  });
-  const refreshFiredRef = useRef(false);
-  const needsSnapshot =
-    activation?.domain != null &&
-    overview !== undefined &&
-    (overview.backlinks === null || overview.backlinks.stale);
-  useEffect(() => {
-    if (!needsSnapshot || refreshFiredRef.current) return;
-    refreshFiredRef.current = true;
-    refreshMutation.mutate();
-  }, [needsSnapshot, refreshMutation]);
 
   if (activationQuery.isError && !activation) {
     return (
@@ -71,7 +67,7 @@ export function DashboardPage({ projectId }: { projectId: string }) {
   // Wait for the overview too: rendering cards from `overview === undefined`
   // flashes their empty states (and reshuffles the data-first sort) once the
   // real data lands. An overview error falls through so the page still loads,
-  // with the error in place of the audit and backlink cards.
+  // with the error in place of the audit card.
   if (!activation || overviewQuery.isPending) {
     return (
       <div className="px-4 py-4 md:px-6 md:py-6" aria-busy>
@@ -95,9 +91,27 @@ export function DashboardPage({ projectId }: { projectId: string }) {
   // connect pitch. It sits ahead of the optional GA4 pitch.
   const cards = [
     {
+      key: "newQueries",
+      hasData: gscConnected,
+      node: (
+        <DashboardNewQueries
+          projectId={projectId}
+          connected={gscConnected}
+          siteUrl={activation.gsc.siteUrl}
+          compact
+        />
+      ),
+    },
+    {
       key: "gsc",
       hasData: gscConnected,
-      node: <GscCard projectId={projectId} connected={gscConnected} />,
+      node: (
+        <GscCard
+          projectId={projectId}
+          connected={gscConnected}
+          siteUrl={activation.gsc.siteUrl}
+        />
+      ),
     },
     ...(ga4Connected || !activation.ga4.cardDismissedAt
       ? [
@@ -114,21 +128,24 @@ export function DashboardPage({ projectId }: { projectId: string }) {
             key: "audit",
             hasData: overview.audit != null,
             node: (
-              <AuditHealthCard projectId={projectId} audit={overview.audit} />
+              <AuditHealthCard
+                projectId={projectId}
+                audit={overview.audit}
+                domain={activation.domain}
+              />
             ),
           },
         ]
       : []),
-    ...(overview && showBacklinks
+    ...(showBacklinks
       ? [
           {
             key: "backlinks",
-            hasData: overview.backlinks != null || refreshMutation.isPending,
+            hasData: true,
             node: (
-              <BacklinkPulseCard
+              <DashboardLinkActivity
                 projectId={projectId}
-                backlinks={overview.backlinks}
-                refreshing={refreshMutation.isPending}
+                domain={activation.domain!}
               />
             ),
           },
@@ -139,15 +156,28 @@ export function DashboardPage({ projectId }: { projectId: string }) {
   return (
     <div className="px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Your website
+            </p>
+            <h1 className="text-2xl font-semibold">
+              {activation.domain || "Dashboard"}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Search visibility, links and site health in one place.
+            </p>
+          </div>
+          <Link
+            to="/p/$projectId/settings"
+            params={{ projectId }}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Project settings →
+          </Link>
+        </div>
 
         <WorkspaceMergeBanner />
-
-        <DashboardOnboarding
-          key={projectId}
-          projectId={projectId}
-          activation={activation}
-        />
 
         {activationQuery.isError ? (
           <QueryError
@@ -161,22 +191,82 @@ export function DashboardPage({ projectId }: { projectId: string }) {
         {overviewQuery.isError ? (
           <QueryError
             error={overviewQuery.error}
-            fallback="Failed to load site audit and backlink summaries"
+            fallback="Failed to load site health"
             onRetry={() => void overviewQuery.refetch()}
             isRetrying={overviewQuery.isFetching}
           />
         ) : null}
 
-        {/* Every card is half width on large screens (only the checklist spans).
-          Cards with data render before setup pitches and empty states. Cards in
-          a row stretch to the same height. */}
-        <div className="grid gap-5 lg:grid-cols-2">
-          {sort(cards, (a, b) => Number(b.hasData) - Number(a.hasData)).map(
-            (card) => (
-              <Fragment key={card.key}>{card.node}</Fragment>
-            ),
-          )}
-        </div>
+        <Tabs
+          value={tab}
+          onValueChange={(value) => {
+            const parsed = dashboardSiteTabSchema.safeParse(value);
+            if (parsed.success) onTabChange(parsed.data);
+          }}
+        >
+          <div className="overflow-x-auto border-b pb-2">
+            <TabsList
+              variant="line"
+              className="h-11 gap-4"
+              aria-label="Your website dashboard"
+            >
+              {(
+                [
+                  ["overview", "Overview"],
+                  ["keywords", "Keywords"],
+                  ["backlinks", "Backlinks"],
+                ] as const
+              ).map(([value, label]) => (
+                <TabsTrigger key={value} value={value} className="px-2">
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+          {/* Base UI unmounts inactive panels, so paid detail queries load only on opening their tab. */}
+          <TabsContent
+            value="overview"
+            className="space-y-5 pt-4"
+            keepMounted={false}
+          >
+            <>
+              <DashboardOnboarding
+                key={projectId}
+                projectId={projectId}
+                activation={activation}
+              />
+
+              <div className="grid gap-5 lg:grid-cols-2">
+                {sort(
+                  cards,
+                  (a, b) => Number(b.hasData) - Number(a.hasData),
+                ).map((card) => (
+                  <Fragment key={card.key}>{card.node}</Fragment>
+                ))}
+              </div>
+            </>
+          </TabsContent>
+
+          <TabsContent value="keywords" className="pt-4" keepMounted={false}>
+            <DashboardKeywords
+              key={`${projectId}:${activation.domain}`}
+              projectId={projectId}
+              connected={gscConnected}
+              siteUrl={activation.gsc.siteUrl}
+            />
+          </TabsContent>
+          <TabsContent value="backlinks" className="pt-4" keepMounted={false}>
+            {activation.domain ? (
+              <DashboardBacklinks
+                key={activation.domain}
+                projectId={projectId}
+                domain={activation.domain}
+              />
+            ) : (
+              <p>Add your website in project settings to see backlinks.</p>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

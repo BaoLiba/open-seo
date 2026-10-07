@@ -65,6 +65,14 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       });
       onClose();
       toast.success("Project created");
+      if (created.initialAudit?.status === "unavailable")
+        toast.warning("Website saved. The first scan could not start.", {
+          description: getStandardErrorMessage(
+            new Error(created.initialAudit.code),
+          ),
+        });
+      else if (created.initialAudit?.status === "started")
+        toast.success("Your 50-page site scan is running");
       // Continue setup through the new project’s dashboard.
       void navigate({
         to: "/p/$projectId",
@@ -123,6 +131,10 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
               )}
             </form.AppField>
 
+            <p className="text-sm text-muted-foreground">
+              Adding your website starts a 50-page scan with JavaScript
+              rendering. Rendering uses your credits.
+            </p>
             <form.AppField name="domain">
               {(field) => (
                 <field.TextField

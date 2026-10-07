@@ -1,3 +1,4 @@
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { projectsQueryOptions } from "@/client/features/projects/projectQueries";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -60,11 +61,25 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
           ...values.market,
         },
       }),
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
       await queryClient.invalidateQueries({
         queryKey: projectsQueryOptions().queryKey,
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["dashboardActivation", project.id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["dashboardOverview", project.id],
+      });
       toast.success("Project updated");
+      if (saved.initialAudit?.status === "unavailable")
+        toast.warning("Website saved. The first scan could not start.", {
+          description: getStandardErrorMessage(
+            new Error(saved.initialAudit.code),
+          ),
+        });
+      else if (saved.initialAudit?.status === "started")
+        toast.success("Your 50-page site scan is running");
     },
   });
 
@@ -99,6 +114,10 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
             )}
           </form.AppField>
 
+          <p className="text-sm text-muted-foreground">
+            Adding your website starts a 50-page scan with JavaScript rendering.
+            Rendering uses your credits.
+          </p>
           <form.AppField name="domain">
             {(field) => (
               <field.TextField
