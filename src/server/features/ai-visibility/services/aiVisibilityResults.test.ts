@@ -188,7 +188,12 @@ describe("AI visibility results", () => {
       ownership: "all",
     });
     expect(sources.rows).toMatchObject([
-      { url: "https://openseo.so/pricing", ownership: "own", answerCount: 2 },
+      {
+        url: "https://openseo.so/pricing",
+        ownership: "own",
+        answerCount: 2,
+        promptIds: ["prompt-0", "prompt-1"],
+      },
       { url: "https://ahrefs.com/blog", ownership: "competitor" },
     ]);
   });

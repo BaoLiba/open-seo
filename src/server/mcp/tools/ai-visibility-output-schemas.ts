@@ -160,6 +160,7 @@ export const aiSourcesOutput = z.looseObject({
       ownership: z.enum(["own", "competitor", "other"]),
       answerCount: count,
       promptCount: count,
+      promptIds: z.array(text),
       engines: z.array(z.looseObject({ engine, answerCount: count })),
       observationIds: z.array(text),
       truncated: flag,

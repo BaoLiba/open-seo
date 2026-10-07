@@ -312,6 +312,7 @@ export async function loadAiSources(input: AiSourcesInput): Promise<AiSources> {
         ownership,
         answerCount: 0,
         promptCount: 0,
+        promptIds: [],
         engines: [],
         observationIds: [],
         truncated: false,
@@ -332,6 +333,7 @@ export async function loadAiSources(input: AiSourcesInput): Promise<AiSources> {
       ...g.row,
       answerCount: g.answers.size,
       promptCount: g.prompts.size,
+      promptIds: [...g.prompts],
       engines: [...g.engines].map(([engine, answers]) => ({
         engine,
         answerCount: answers.size,

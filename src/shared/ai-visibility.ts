@@ -192,6 +192,8 @@ export interface AiSourceRow {
   ownership: "own" | "competitor" | "other";
   answerCount: number;
   promptCount: number;
+  /** The tracked prompts whose answers cited this source. */
+  promptIds: string[];
   engines: { engine: AiEngine; answerCount: number }[];
   observationIds: string[];
   truncated: boolean;
