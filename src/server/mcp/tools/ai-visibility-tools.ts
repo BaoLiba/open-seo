@@ -230,10 +230,10 @@ export const estimateAiVisibilityCostTool = defineAiTool({
   output: aiCostOutput,
   readOnly: true,
   description:
-    "Estimate one check and the monthly cost of a daily, weekly, or monthly schedule without collecting answers. Optional patch estimates proposed settings; promptIds estimates a check of those prompts. Show the customer cost and monthly estimate before enabling tracking or running a paid check, and pass the approved check cost to run_ai_visibility_check as maxCostUsd.",
+    "Estimate one scheduled check, one-off check, and the monthly cost of a daily, weekly, or monthly schedule without collecting answers. Optional patch estimates proposed settings; promptIds estimates a check of those prompts. costUsd prices each scheduled check. runNowCostUsd prices a one-off check, which collects live answers within minutes at a higher price. Show the customer the relevant cost before enabling tracking or running a paid check, and pass the approved runNowCostUsd to run_ai_visibility_check as maxCostUsd.",
   execute: (s, a) => s.estimateCost(a),
   summarize: (d) =>
-    `${d.observations} answers: $${d.costUsd.toFixed(4)} (${d.costCredits} credits) per check. Estimate on the ${d.scheduleInterval} schedule: $${d.monthlyCostUsd.toFixed(2)}/month (${d.checksPerMonth} ${d.checksPerMonth === 1 ? "check" : "checks"}).${d.warnings.length ? ` Warnings: ${d.warnings.join("; ")}` : ""}`,
+    `${d.observations} answers: $${d.costUsd.toFixed(4)} (${d.costCredits} credits) per scheduled check, $${d.runNowCostUsd.toFixed(4)} (${d.runNowCostCredits} credits) to run now. Estimate on the ${d.scheduleInterval} schedule: $${d.monthlyCostUsd.toFixed(2)}/month (${d.checksPerMonth} ${d.checksPerMonth === 1 ? "check" : "checks"}).${d.warnings.length ? ` Warnings: ${d.warnings.join("; ")}` : ""}`,
 });
 export const setAiVisibilityScheduleTool = defineAiTool({
   name: "set_ai_visibility_schedule",
@@ -257,7 +257,7 @@ export const runAiVisibilityCheckTool = defineAiTool({
   output: aiRunOutput,
   readOnly: false,
   description:
-    "Start an explicitly approved one-off paid AI check, preserving the schedule. maxCostUsd is the cost the user approved from estimate_ai_visibility_cost; the check is refused if it now costs more. Only one check runs per project at a time. Returns a run immediately. Never call this tool to poll: use get_ai_visibility_run with the returned run ID.",
+    "Start an explicitly approved one-off paid AI check, preserving the schedule. It collects live answers, so results arrive within minutes. maxCostUsd is the runNowCostUsd the user approved from estimate_ai_visibility_cost; the check is refused if it now costs more. Only one check runs per project at a time. Returns a run immediately. Never call this tool to poll: use get_ai_visibility_run with the returned run ID.",
   execute: (s, a, b) => s.runCheck(a, b),
   summarize: (d) =>
     `Run ${d.id}: ${d.status}, ${d.completed}/${d.expected} completed. ${runNextAction(d)}`,

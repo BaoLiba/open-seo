@@ -6,6 +6,7 @@ import {
   isHostedServerAuthMode,
 } from "@/server/lib/runtime-env";
 import {
+  AI_LIVE_RECORD_COST_USD,
   AI_RECORD_COST_USD,
   type AiCostEstimate,
 } from "@/shared/ai-visibility";
@@ -17,10 +18,19 @@ import { scheduledChecksPerMonth } from "@/shared/rank-tracking";
 import type { EstimateAiCostInput } from "@/types/schemas/ai-visibility";
 import { projectPatch } from "./aiVisibilityMutation";
 
-/** The customer's cost for `count` answers: credits when hosted, else provider USD. */
-export function aiCostForCount(count: number, hosted: boolean) {
-  const providerCostUsd = Math.round(count * AI_RECORD_COST_USD * 1e6) / 1e6;
-  const costCredits = count * creditsForProviderUsd(AI_RECORD_COST_USD);
+/**
+ * The customer's cost for `count` answers: credits when hosted, else provider
+ * USD. Manual runs collect live answers; scheduled runs use the queue.
+ */
+export function aiCostForCount(
+  count: number,
+  hosted: boolean,
+  mode: "live" | "queued",
+) {
+  const answerUsd =
+    mode === "live" ? AI_LIVE_RECORD_COST_USD : AI_RECORD_COST_USD;
+  const providerCostUsd = Math.round(count * answerUsd * 1e6) / 1e6;
+  const costCredits = count * creditsForProviderUsd(answerUsd);
   return {
     providerCostUsd,
     costCredits: hosted ? costCredits : 0,
@@ -45,7 +55,8 @@ export async function estimateCost(
   const scope = aiScope(config, input.promptIds);
   const observations = scope.prompts.length * scope.engines.length;
   const hosted = await isHostedServerAuthMode();
-  const cost = aiCostForCount(observations, hosted);
+  const cost = aiCostForCount(observations, hosted, "queued");
+  const runNow = aiCostForCount(observations, hosted, "live");
   const scheduleInterval =
     input.scheduleInterval ?? current?.tracker.scheduleInterval ?? "weekly";
   const checksPerMonth = scheduledChecksPerMonth(scheduleInterval);
@@ -54,6 +65,8 @@ export async function estimateCost(
     engineCount: scope.engines.length,
     observations,
     ...cost,
+    runNowCostUsd: runNow.costUsd,
+    runNowCostCredits: runNow.costCredits,
     scheduleInterval,
     checksPerMonth,
     monthlyCostUsd: Math.round(cost.costUsd * checksPerMonth * 1e6) / 1e6,

@@ -70,6 +70,8 @@ export const aiCostOutput = z.looseObject({
   providerCostUsd: money,
   costUsd: money,
   costCredits: money,
+  runNowCostUsd: money,
+  runNowCostCredits: money,
   scheduleInterval: text,
   checksPerMonth: count,
   monthlyCostUsd: money,

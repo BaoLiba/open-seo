@@ -164,6 +164,7 @@ export async function runCheck(
   const { costUsd } = aiCostForCount(
     scope.prompts.length * scope.engines.length,
     await isHostedServerAuthMode(),
+    "live",
   );
   if (Math.round(costUsd * 1e6) > Math.round(input.maxCostUsd * 1e6))
     throw new AiVisibilityError(

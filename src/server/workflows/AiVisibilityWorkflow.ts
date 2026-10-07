@@ -5,6 +5,7 @@ import {
 } from "cloudflare:workers";
 import { pgStep } from "./pgStep";
 import {
+  collectAiLiveBatch,
   collectAiRound,
   finalizeAiRun,
   markAiRunFailed,
@@ -35,6 +36,9 @@ const COLLECT_STEP = {
   retries: { limit: 2, delay: "10 seconds" as const },
   timeout: "5 minutes" as const,
 };
+// Live answers are billed per call, so a live step runs once too. It waits for
+// up to 6 answers, each up to 120 seconds.
+const LIVE_STEP = { ...SINGLE_ATTEMPT, timeout: "5 minutes" as const };
 // Standard-queue answers usually arrive within minutes. Cumulative waits are
 // 2 / 4 / 7 / 10 / 14 / 18 / 22 / 26 / 30 minutes; anything still missing then
 // fails as not collected. Each sleep stays under 5 minutes, like rank check's:
@@ -83,18 +87,23 @@ export class AiVisibilityWorkflow extends WorkflowEntrypoint<
     };
     let pending: AiPendingTask[] = [];
     try {
-      const { market, batches } = await pgStep(
-        step,
-        "prepare",
-        SINGLE_ATTEMPT,
-        () => prepareAiRun(runId, customer),
+      const plan = await pgStep(step, "prepare", SINGLE_ATTEMPT, () =>
+        prepareAiRun(runId, customer),
       );
-      for (const [index, batch] of batches.entries())
-        pending.push(
-          ...(await pgStep(step, `post-${index}`, SINGLE_ATTEMPT, () =>
-            postAiBatch(runId, customer, market, batch),
-          )),
-        );
+      // Manual runs save each live batch as it returns, so nothing is left
+      // pending to poll.
+      if (plan.live)
+        for (const [index, tasks] of plan.batches.entries())
+          await pgStep(step, `live-${index}`, LIVE_STEP, () =>
+            collectAiLiveBatch(runId, customer, plan.market, tasks),
+          );
+      else
+        for (const [index, batch] of plan.batches.entries())
+          pending.push(
+            ...(await pgStep(step, `post-${index}`, SINGLE_ATTEMPT, () =>
+              postAiBatch(runId, customer, plan.market, batch),
+            )),
+          );
     } catch (error) {
       return failRun(error);
     }

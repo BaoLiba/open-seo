@@ -14,6 +14,11 @@ export const AI_ENGINE_LABELS: Record<AiEngine, string> = {
  * organic SERP page ($0.0006) plus the async overview load ($0.0006).
  */
 export const AI_RECORD_COST_USD = 0.0012;
+/**
+ * Raw DataForSEO USD for one live answer, used by manual runs. AI Overviews is
+ * one live organic SERP page ($0.002) plus the async overview load ($0.002).
+ */
+export const AI_LIVE_RECORD_COST_USD = 0.004;
 export type AiScheduleInterval = "daily" | "weekly" | "monthly";
 export type AiObservationStatus = "pending" | "completed" | "failed";
 /** Prompts without a chosen topic are grouped here. */
@@ -102,6 +107,9 @@ export interface AiCostEstimate {
   providerCostUsd: number;
   costUsd: number;
   costCredits: number;
+  /** A one-off Run now check collects live answers, at the live price. */
+  runNowCostUsd: number;
+  runNowCostCredits: number;
   scheduleInterval: AiScheduleInterval;
   checksPerMonth: number;
   monthlyCostUsd: number;

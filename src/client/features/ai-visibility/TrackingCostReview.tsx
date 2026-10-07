@@ -120,6 +120,9 @@ export function TrackingCostReview({
     placeholderData: keepPreviousData,
   });
   const cost = estimate.data;
+  // Run now collects live answers; scheduled runs use the cheaper queue.
+  const runCostUsd =
+    (mode === "check" ? cost?.runNowCostUsd : cost?.costUsd) ?? 0;
   const start = useMutation({
     mutationFn: async () => {
       if (!cost) throw new Error("Review the estimate before starting.");
@@ -143,7 +146,7 @@ export function TrackingCostReview({
       return runAiVisibilityCheck({
         data: {
           projectId,
-          maxCostUsd: cost.costUsd,
+          maxCostUsd: cost.runNowCostUsd,
           promptIds,
         },
       });
@@ -220,10 +223,10 @@ export function TrackingCostReview({
                 {mode === "schedule" ? "Cost per run" : "Cost"}
               </FieldLabel>
               <span className="text-2xl font-semibold tabular-nums">
-                {aiMoney(cost.costUsd)}
+                {aiMoney(runCostUsd)}
               </span>
               <FieldDescription>
-                {`${cost.observations} ${cost.observations === 1 ? "answer" : "answers"} × ${aiMoney(cost.observations ? cost.costUsd / cost.observations : 0)}${mode === "schedule" ? ` · about ${aiMoney(cost.monthlyCostUsd)} a month (${cost.checksPerMonth} ${cost.checksPerMonth === 1 ? "run" : "runs"})` : ""}`}
+                {`${cost.observations} ${cost.observations === 1 ? "answer" : "answers"} × ${aiMoney(cost.observations ? runCostUsd / cost.observations : 0)}${mode === "schedule" ? ` · about ${aiMoney(cost.monthlyCostUsd)} a month (${cost.checksPerMonth} ${cost.checksPerMonth === 1 ? "run" : "runs"})` : " · live answers, ready in a few minutes"}`}
               </FieldDescription>
             </Field>
             {start.error && <AiQueryError error={start.error} />}

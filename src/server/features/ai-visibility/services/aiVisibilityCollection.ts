@@ -4,11 +4,12 @@ import {
   createDataforseoClient,
   fetchAiTrackingTaskResult,
   MAX_TASKS_PER_POST,
+  type AiTrackingAnswer,
   type PostedAiTrackingTask,
 } from "@/server/lib/dataforseo";
 import { AppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
-import type { AiEngine } from "@/shared/ai-visibility";
+import type { AiBrand, AiEngine } from "@/shared/ai-visibility";
 import { AiVisibilityRepository as repo } from "../repositories/AiVisibilityRepository";
 import { parseDataforseoAnswer } from "../providers/dataforseoEvidence";
 import { aiBrands } from "./aiVisibilityConfiguration";
@@ -24,6 +25,12 @@ interface AiTaskBatch {
   /** Tag = answer row id. At most 100 per task_post. */
   tasks: { tag: string; prompt: string }[];
 }
+/** One live answer. A live step mixes engines, so each task names its own. */
+interface AiLiveTask {
+  tag: string;
+  prompt: string;
+  engine: AiEngine;
+}
 export type AiPendingTask = PostedAiTrackingTask & { engine: AiEngine };
 interface AiRunMarket {
   locationCode: number;
@@ -31,21 +38,39 @@ interface AiRunMarket {
 }
 
 /**
- * Marks the run running and groups its answers into task_post batches. Hosted
- * runs first check that credits cover the whole check, like rank checks.
+ * Live answers per workflow step. A Worker holds 6 connections open at once,
+ * so a larger step only queues calls behind the first 6.
+ */
+const LIVE_ANSWERS_PER_STEP = 6;
+
+/**
+ * Marks the run running and groups its answers into batches. Manual runs
+ * collect live answers so the user sees results sooner. Scheduled and
+ * baseline runs use the cheaper standard queue. Hosted runs first check that
+ * credits cover the whole check, like rank checks.
  */
 export async function prepareAiRun(
   runId: string,
   customer: BillingCustomerContext,
-): Promise<{ market: AiRunMarket; batches: AiTaskBatch[] }> {
+): Promise<
+  { market: AiRunMarket } & (
+    | { live: false; batches: AiTaskBatch[] }
+    | { live: true; batches: AiLiveTask[][] }
+  )
+> {
   const run = await repo.getRunInternal(runId);
   if (!run || (run.status !== "queued" && run.status !== "running"))
     throw new AppError("NOT_FOUND", `Run ${runId} is no longer active.`);
   const answers = (await repo.getObservations([runId])).filter(
     (row) => row.status === "pending",
   );
+  const live = run.trigger === "manual";
   if (await isHostedServerAuthMode()) {
-    const required = aiCostForCount(answers.length, true).costCredits;
+    const required = aiCostForCount(
+      answers.length,
+      true,
+      live ? "live" : "queued",
+    ).costCredits;
     const credits = await getUsageCreditsRemaining(customer.organizationId);
     if (credits.monthlyRemaining + credits.topupRemaining < required)
       throw new AppError(
@@ -54,6 +79,21 @@ export async function prepareAiRun(
       );
   }
   await repo.updateRun(runId, { status: "running" });
+  const market = {
+    locationCode: run.locationCode,
+    languageCode: run.languageCode,
+  };
+  if (live) {
+    const tasks = answers.map((row) => ({
+      tag: row.id,
+      prompt: row.prompt,
+      engine: row.engine,
+    }));
+    const batches: AiLiveTask[][] = [];
+    for (let i = 0; i < tasks.length; i += LIVE_ANSWERS_PER_STEP)
+      batches.push(tasks.slice(i, i + LIVE_ANSWERS_PER_STEP));
+    return { market, live, batches };
+  }
   const batches: AiTaskBatch[] = [];
   for (const engine of new Set(answers.map((row) => row.engine))) {
     const tasks = answers
@@ -62,10 +102,7 @@ export async function prepareAiRun(
     for (let i = 0; i < tasks.length; i += MAX_TASKS_PER_POST)
       batches.push({ engine, tasks: tasks.slice(i, i + MAX_TASKS_PER_POST) });
   }
-  return {
-    market: { locationCode: run.locationCode, languageCode: run.languageCode },
-    batches,
-  };
+  return { market, live, batches };
 }
 
 /**
@@ -98,6 +135,51 @@ export async function postAiBatch(
   return posted.map((task) => ({ ...task, engine: batch.engine }));
 }
 
+/**
+ * Collects one batch of live answers through the metered client, which bills
+ * them, and saves each one. Answers that fail now are not retried.
+ */
+export async function collectAiLiveBatch(
+  runId: string,
+  customer: BillingCustomerContext,
+  market: AiRunMarket,
+  tasks: AiLiveTask[],
+) {
+  const brands = await runBrands(runId);
+  if (!brands) return;
+  let settled: PromiseSettledResult<AiTrackingAnswer>[];
+  try {
+    settled = await createDataforseoClient(customer).aiSearch.trackingLiveBatch(
+      tasks.map((task) => ({ engine: task.engine, task, ...market })),
+    );
+  } catch (error) {
+    settled = tasks.map(() => ({ status: "rejected", reason: error }));
+  }
+  for (const [index, outcome] of settled.entries()) {
+    const result: AiTrackingAnswer =
+      outcome.status === "fulfilled"
+        ? outcome.value
+        : {
+            status: "failed",
+            message:
+              outcome.reason instanceof Error
+                ? outcome.reason.message
+                : String(outcome.reason),
+          };
+    // Every answer here is already paid for, and the step cannot rerun, so
+    // one failed write must not drop the rest. finalizeAiRun fails the
+    // answer that stays pending.
+    try {
+      await saveAiOutcome(runId, tasks[index], result, brands);
+    } catch (error) {
+      console.error(
+        `[ai-visibility] ${runId} could not save answer ${tasks[index].tag}:`,
+        error,
+      );
+    }
+  }
+}
+
 /** Concurrent task_get requests within a collect step. */
 const TASK_GET_CONCURRENCY = 25;
 
@@ -109,11 +191,8 @@ export async function collectAiRound(
   runId: string,
   tasks: AiPendingTask[],
 ): Promise<AiPendingTask[]> {
-  const run = await repo.getRunInternal(runId);
-  const project = run ? await repo.getProject(run.projectId) : null;
-  if (!run || !project) return [];
-  // Brands come from the project as each answer is matched.
-  const brands = aiBrands(project, await repo.listCompetitors(project.id));
+  const brands = await runBrands(runId);
+  if (!brands) return [];
   const stillPending: AiPendingTask[] = [];
   for (let i = 0; i < tasks.length; i += TASK_GET_CONCURRENCY) {
     const chunk = tasks.slice(i, i + TASK_GET_CONCURRENCY);
@@ -127,44 +206,60 @@ export async function collectAiRound(
         stillPending.push(task);
         continue;
       }
-      if (outcome.value.status === "failed") {
-        await repo.failPendingObservations(runId, outcome.value.message, [
-          task.tag,
-        ]);
-        continue;
-      }
-      const answer = parseDataforseoAnswer(outcome.value.result, task.engine);
-      if (!answer) {
-        await repo.failPendingObservations(
-          runId,
-          "DataForSEO returned an answer we could not read.",
-          [task.tag],
-        );
-        continue;
-      }
-      await repo.persistAnswer({
-        observationId: task.tag,
-        values: {
-          status: "completed",
-          collectedAt: answer.collectedAt ?? new Date().toISOString(),
-          answerMarkdown: answer.answerMarkdown,
-          error: null,
-        },
-        sources: answer.citations.map((citation) => ({
-          id: crypto.randomUUID(),
-          observationId: task.tag,
-          ...citation,
-        })),
-        matches: brands.map((brand) => ({
-          id: crypto.randomUUID(),
-          observationId: task.tag,
-          ...brand,
-          ...matchAiBrand(answer, brand),
-        })),
-      });
+      await saveAiOutcome(runId, task, outcome.value, brands);
     }
   }
   return stillPending;
+}
+
+/** Brands come from the project as each answer is matched. */
+async function runBrands(runId: string) {
+  const run = await repo.getRunInternal(runId);
+  const project = run ? await repo.getProject(run.projectId) : null;
+  if (!run || !project) return null;
+  return aiBrands(project, await repo.listCompetitors(project.id));
+}
+
+/** Saves a finished answer with its citations and brand results, or fails it. */
+async function saveAiOutcome(
+  runId: string,
+  task: { tag: string; engine: AiEngine },
+  outcome: AiTrackingAnswer,
+  brands: AiBrand[],
+) {
+  if (outcome.status === "failed") {
+    await repo.failPendingObservations(runId, outcome.message, [task.tag]);
+    return;
+  }
+  const answer = parseDataforseoAnswer(outcome.result, task.engine);
+  if (!answer) {
+    await repo.failPendingObservations(
+      runId,
+      "DataForSEO returned an answer we could not read.",
+      [task.tag],
+    );
+    return;
+  }
+  await repo.persistAnswer({
+    observationId: task.tag,
+    values: {
+      status: "completed",
+      collectedAt: answer.collectedAt ?? new Date().toISOString(),
+      answerMarkdown: answer.answerMarkdown,
+      error: null,
+    },
+    sources: answer.citations.map((citation) => ({
+      id: crypto.randomUUID(),
+      observationId: task.tag,
+      ...citation,
+    })),
+    matches: brands.map((brand) => ({
+      id: crypto.randomUUID(),
+      observationId: task.tag,
+      ...brand,
+      ...matchAiBrand(answer, brand),
+    })),
+  });
 }
 
 /** Fails answers that never arrived and records how the run finished. */

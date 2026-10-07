@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { projectCompetitors } from "@/db/schema";
 import { AiVisibilityRepository as repo } from "../repositories/AiVisibilityRepository";
 import {
+  collectAiLiveBatch,
   collectAiRound,
   finalizeAiRun,
   postAiBatch,
+  prepareAiRun,
 } from "./aiVisibilityCollection";
 import { configuration, customer } from "./aiVisibilityTestFixtures";
 
@@ -12,7 +14,11 @@ const { testDb, dataforseo } = await vi.hoisted(async () => {
   const { createAiVisibilityTestDb } = await import("../aiVisibilityTestDb");
   return {
     testDb: await createAiVisibilityTestDb(),
-    dataforseo: { trackingTaskPost: vi.fn(), fetchTaskResult: vi.fn() },
+    dataforseo: {
+      trackingTaskPost: vi.fn(),
+      trackingLiveBatch: vi.fn(),
+      fetchTaskResult: vi.fn(),
+    },
   };
 });
 vi.mock("cloudflare:workers", () => ({ env: { DATABASE_PROVIDER: "d1" } }));
@@ -24,7 +30,10 @@ vi.mock("@/server/lib/runtime-env", () => ({
 vi.mock("@/server/lib/dataforseo", () => ({
   MAX_TASKS_PER_POST: 100,
   createDataforseoClient: () => ({
-    aiSearch: { trackingTaskPost: dataforseo.trackingTaskPost },
+    aiSearch: {
+      trackingTaskPost: dataforseo.trackingTaskPost,
+      trackingLiveBatch: dataforseo.trackingLiveBatch,
+    },
   }),
   fetchAiTrackingTaskResult: dataforseo.fetchTaskResult,
 }));
@@ -132,6 +141,58 @@ describe("AI answer collection", () => {
     ]);
     expect(await repo.getObservation("answer-1")).toMatchObject({
       status: "failed",
+    });
+  });
+
+  it("collects a manual run live, saving answers and failing rejected calls", async () => {
+    expect(await prepareAiRun(runId, customer)).toMatchObject({ live: true });
+    dataforseo.trackingLiveBatch.mockResolvedValue([
+      {
+        status: "fulfilled",
+        value: {
+          status: "completed",
+          result: { markdown: "OpenSEO", sources: [] },
+        },
+      },
+      { status: "rejected", reason: new Error("Timed out") },
+    ]);
+
+    await collectAiLiveBatch(runId, customer, market, [
+      { tag: "answer-0", prompt: "Which SEO tools?", engine: "chatgpt" },
+      { tag: "answer-1", prompt: "Best rank tracker?", engine: "chatgpt" },
+    ]);
+
+    expect(await repo.getObservation("answer-0")).toMatchObject({
+      status: "completed",
+    });
+    expect(await repo.getObservation("answer-1")).toMatchObject({
+      status: "failed",
+      error: "Timed out",
+    });
+  });
+
+  it("saves the rest of a paid live batch when one answer cannot be saved", async () => {
+    const answer = {
+      status: "fulfilled",
+      value: {
+        status: "completed",
+        result: { markdown: "OpenSEO", sources: [] },
+      },
+    };
+    dataforseo.trackingLiveBatch.mockResolvedValue([answer, answer]);
+    vi.spyOn(repo, "persistAnswer").mockRejectedValueOnce(new Error("D1"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await collectAiLiveBatch(runId, customer, market, [
+      { tag: "answer-0", prompt: "Which SEO tools?", engine: "chatgpt" },
+      { tag: "answer-1", prompt: "Best rank tracker?", engine: "chatgpt" },
+    ]);
+
+    expect(await repo.getObservation("answer-0")).toMatchObject({
+      status: "pending",
+    });
+    expect(await repo.getObservation("answer-1")).toMatchObject({
+      status: "completed",
     });
   });
 

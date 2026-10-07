@@ -5,6 +5,7 @@ import { AiVisibilityWorkflow } from "./AiVisibilityWorkflow";
 const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
   post: vi.fn(),
+  live: vi.fn(),
   collect: vi.fn(),
   finalize: vi.fn(),
   markFailed: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock(
   () => ({
     prepareAiRun: mocks.prepare,
     postAiBatch: mocks.post,
+    collectAiLiveBatch: mocks.live,
     collectAiRound: mocks.collect,
     finalizeAiRun: mocks.finalize,
     markAiRunFailed: mocks.markFailed,
@@ -61,6 +63,7 @@ function execute() {
 beforeEach(() => {
   mocks.prepare.mockResolvedValue({
     market: { locationCode: 2840, languageCode: "en" },
+    live: false,
     batches: [
       { engine: "chatgpt", tasks: [] },
       { engine: "gemini", tasks: [] },
@@ -80,6 +83,19 @@ describe("AI visibility workflow", () => {
     });
     expect(mocks.collect).toHaveBeenCalledExactlyOnceWith("run", [task, task]);
     expect(mocks.sleep).toHaveBeenCalledOnce();
+    expect(mocks.finalize).toHaveBeenCalledExactlyOnceWith("run");
+  });
+
+  it("collects a manual run's live batches without posting or polling", async () => {
+    mocks.prepare.mockResolvedValue({
+      market: { locationCode: 2840, languageCode: "en" },
+      live: true,
+      batches: [[]],
+    });
+    await execute();
+    expect(mocks.live).toHaveBeenCalledOnce();
+    expect(mocks.post).not.toHaveBeenCalled();
+    expect(mocks.sleep).not.toHaveBeenCalled();
     expect(mocks.finalize).toHaveBeenCalledExactlyOnceWith("run");
   });
 

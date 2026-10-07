@@ -20,7 +20,7 @@ The trend chart includes manual and scheduled checks, using the latest finished 
 
 ## Credits and cost
 
-Prompt research costs about $0.25 in credits per keyword. Explorer charges actual usage for uncached answers. Tracking shows a cost estimate before a check or schedule is started and bills each check as it collects answers. Checks stop when your credits run out.
+Prompt research costs about $0.25 in credits per keyword. Explorer charges actual usage for uncached answers. Tracking shows a cost estimate before a check or schedule is started and bills each check as it collects answers. Run now collects live answers, which usually arrive within a minute and cost more per answer than scheduled checks. Checks stop when your credits run out.
 
 On hosted OpenSEO, Prompt Research and Prompt Explorer require the paid plan; prompt tracking only needs credits. Setup research uses available credits and is billed after completion.
 

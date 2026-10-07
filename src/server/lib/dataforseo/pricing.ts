@@ -47,8 +47,14 @@ import {
   resolveLlmMentionsLimit,
 } from "@/server/lib/dataforseo/ai";
 import type { LlmResponseModelSlug } from "@/server/lib/dataforseo/llm-models";
-import { postAiTrackingTasks } from "@/server/lib/dataforseo/ai-tracking";
-import { AI_RECORD_COST_USD } from "@/shared/ai-visibility";
+import {
+  fetchAiTrackingLiveAnswer,
+  postAiTrackingTasks,
+} from "@/server/lib/dataforseo/ai-tracking";
+import {
+  AI_LIVE_RECORD_COST_USD,
+  AI_RECORD_COST_USD,
+} from "@/shared/ai-visibility";
 import {
   costPerSerpAtDepth,
   serpKeywordCostMultiplier,
@@ -295,6 +301,11 @@ export const dataforseoPricing = {
     trackingTaskPost: priced(
       postAiTrackingTasks,
       (input) => input.tasks.length * AI_RECORD_COST_USD,
+    ),
+    // One live answer, on every tracked engine.
+    trackingLive: priced(
+      fetchAiTrackingLiveAnswer,
+      () => AI_LIVE_RECORD_COST_USD,
     ),
     llmResponse: priced(fetchLlmResponse, (input) => {
       const price = LLM_RESPONSE_USD[input.modelSlug];
