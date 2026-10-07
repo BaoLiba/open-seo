@@ -1,4 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import { Link2, Settings } from "lucide-react";
+import { EmptyState } from "@/client/components/EmptyState";
+import { Button } from "@/client/components/ui/button";
 import {
   Tabs,
   TabsList,
@@ -156,7 +159,7 @@ export function DashboardPage({
   return (
     <div className="px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Your website
@@ -168,13 +171,14 @@ export function DashboardPage({
               Search visibility, links and site health in one place.
             </p>
           </div>
-          <Link
-            to="/p/$projectId/settings"
-            params={{ projectId }}
-            className="text-sm text-muted-foreground hover:text-foreground"
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link to="/p/$projectId/settings" params={{ projectId }} />}
           >
-            Project settings →
-          </Link>
+            <Settings />
+            Project settings
+          </Button>
         </div>
 
         <WorkspaceMergeBanner />
@@ -197,57 +201,48 @@ export function DashboardPage({
           />
         ) : null}
 
+        <DashboardOnboarding
+          key={projectId}
+          projectId={projectId}
+          activation={activation}
+        />
+
         <Tabs
           value={tab}
           onValueChange={(value) => {
             const parsed = dashboardSiteTabSchema.safeParse(value);
             if (parsed.success) onTabChange(parsed.data);
           }}
+          className="gap-4"
         >
-          <div className="overflow-x-auto border-b pb-2">
-            <TabsList
-              variant="line"
-              className="h-11 gap-4"
-              aria-label="Your website dashboard"
-            >
-              {(
-                [
-                  ["overview", "Overview"],
-                  ["keywords", "Keywords"],
-                  ["backlinks", "Backlinks"],
-                ] as const
-              ).map(([value, label]) => (
-                <TabsTrigger key={value} value={value} className="px-2">
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+          <TabsList aria-label="Your website dashboard" className="h-9">
+            {(
+              [
+                ["overview", "Overview"],
+                ["keywords", "Keywords"],
+                ["backlinks", "Backlinks"],
+              ] as const
+            ).map(([value, label]) => (
+              <TabsTrigger key={value} value={value} className="px-3">
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
           {/* Base UI unmounts inactive panels, so paid detail queries load only on opening their tab. */}
           <TabsContent
             value="overview"
-            className="space-y-5 pt-4"
+            className="grid gap-5 lg:grid-cols-2"
             keepMounted={false}
           >
-            <>
-              <DashboardOnboarding
-                key={projectId}
-                projectId={projectId}
-                activation={activation}
-              />
-
-              <div className="grid gap-5 lg:grid-cols-2">
-                {sort(
-                  cards,
-                  (a, b) => Number(b.hasData) - Number(a.hasData),
-                ).map((card) => (
-                  <Fragment key={card.key}>{card.node}</Fragment>
-                ))}
-              </div>
-            </>
+            {sort(cards, (a, b) => Number(b.hasData) - Number(a.hasData)).map(
+              (card) => (
+                <Fragment key={card.key}>{card.node}</Fragment>
+              ),
+            )}
           </TabsContent>
 
-          <TabsContent value="keywords" className="pt-4" keepMounted={false}>
+          <TabsContent value="keywords" keepMounted={false}>
             <DashboardKeywords
               key={`${projectId}:${activation.domain}`}
               projectId={projectId}
@@ -255,7 +250,7 @@ export function DashboardPage({
               siteUrl={activation.gsc.siteUrl}
             />
           </TabsContent>
-          <TabsContent value="backlinks" className="pt-4" keepMounted={false}>
+          <TabsContent value="backlinks" keepMounted={false}>
             {activation.domain ? (
               <DashboardBacklinks
                 key={activation.domain}
@@ -263,7 +258,25 @@ export function DashboardPage({
                 domain={activation.domain}
               />
             ) : (
-              <p>Add your website in project settings to see backlinks.</p>
+              <EmptyState
+                variant="card"
+                icon={Link2}
+                title="See who links to your website"
+                description="Add your website to track new and lost backlinks and the sites sending them."
+                action={
+                  <Button
+                    nativeButton={false}
+                    render={
+                      <Link
+                        to="/p/$projectId/settings"
+                        params={{ projectId }}
+                      />
+                    }
+                  >
+                    Add your website
+                  </Button>
+                }
+              />
             )}
           </TabsContent>
         </Tabs>
