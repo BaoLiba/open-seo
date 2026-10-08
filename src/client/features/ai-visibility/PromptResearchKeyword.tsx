@@ -9,8 +9,8 @@ import {
 import { researchAiVisibilityPrompts } from "@/serverFunctions/ai-visibility";
 import { normalizeAiSuggestion } from "@/shared/ai-prompt-suggestions";
 import type { AiTrackerState } from "@/shared/ai-visibility";
-import type { AiTrackerPatch } from "@/types/schemas/ai-visibility";
 import { PromptResearchTable } from "./PromptResearchTable";
+import { TopicField } from "./TopicField";
 import { TrackerPatchReview } from "./TrackerPatchReview";
 import { AiQueryError, aiVisibilityKey } from "./shared";
 
@@ -25,9 +25,10 @@ export function PromptResearchKeyword({
 }) {
   const queryClient = useQueryClient();
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  // The prompts to track and their topic, while the user reviews them.
   const [change, setChange] = useState<{
-    patch: AiTrackerPatch;
-    description: string;
+    prompts: string[];
+    topic: string;
   } | null>(null);
   // The tracked prompts refresh tracked flags after any tracker edit. The
   // server reuses its cached provider response, so this costs no extra credits.
@@ -48,17 +49,17 @@ export function PromptResearchKeyword({
   const selected = (research.data?.prompts ?? [])
     .filter((prompt) => rowSelection[prompt.text])
     .map((prompt) => prompt.text);
-  const track = () => {
-    const topic =
-      state.topics.find(
-        (name) =>
-          normalizeAiSuggestion(name) === normalizeAiSuggestion(keyword),
-      ) ?? keyword;
+  // Defaults to the saved topic that matches the keyword, else the keyword.
+  const track = () =>
     setChange({
-      description: `Track ${selected.length} researched ${selected.length === 1 ? "prompt" : "prompts"} in the ${topic} topic.`,
-      patch: { prompts: selected.map((text) => ({ text, topic })) },
+      prompts: selected,
+      topic:
+        state.topics.find(
+          (name) =>
+            normalizeAiSuggestion(name) === normalizeAiSuggestion(keyword),
+        ) ?? keyword,
     });
-  };
+  const topic = change?.topic.trim();
   return (
     <>
       <TableBulkActionBar
@@ -104,8 +105,13 @@ export function PromptResearchKeyword({
         <TrackerPatchReview
           projectId={projectId}
           state={state}
-          patch={change.patch}
-          description={change.description}
+          patch={{
+            prompts: change.prompts.map((text) => ({
+              text,
+              topic: topic || undefined,
+            })),
+          }}
+          canSave={Boolean(topic)}
           onClose={() => setChange(null)}
           onSaved={(next) => {
             queryClient.setQueryData(
@@ -115,7 +121,13 @@ export function PromptResearchKeyword({
             setChange(null);
             setRowSelection({});
           }}
-        />
+        >
+          <TopicField
+            topics={state.topics}
+            value={change.topic}
+            onChange={(name) => setChange({ ...change, topic: name })}
+          />
+        </TrackerPatchReview>
       )}
     </>
   );

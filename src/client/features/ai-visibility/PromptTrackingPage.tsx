@@ -103,10 +103,7 @@ function PromptTrackingContent({
   const [selectedRun, setSelectedRun] = useState<AiRun | null>(null);
   const [costMode, setCostMode] = useState<"check" | "schedule" | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<AiPrompt | null>(null);
-  const [change, setChange] = useState<{
-    patch: AiTrackerPatch;
-    description: string;
-  } | null>(null);
+  const [change, setChange] = useState<AiTrackerPatch | null>(null);
   const currentRun = selectedRun ?? state.recentRuns[0] ?? null;
   const progress = useAiRunProgress(projectId, currentRun);
   const tracker = state.tracker;
@@ -249,9 +246,7 @@ function PromptTrackingContent({
                 onSetup={() => setEditorMode(TrackerEditorMode.Prompts)}
                 onEdit={setEditingPrompt}
                 onReduce={(patch) => reduceTracking.mutate(patch)}
-                onReview={(patch, description) =>
-                  setChange({ patch, description })
-                }
+                onReview={setChange}
                 reducePending={reduceTracking.isPending}
               />
             )}
@@ -328,23 +323,20 @@ function PromptTrackingContent({
         <PromptEditor
           prompt={editingPrompt}
           state={state}
+          pending={reduceTracking.isPending}
           onClose={() => setEditingPrompt(null)}
           onReview={(patch) => {
             setEditingPrompt(null);
-            setChange({
-              patch,
-              description:
-                "Save this exact prompt and topic. Changed wording archives this prompt and adds the new wording as a new prompt; earlier answers keep the prompt they were collected for.",
-            });
+            setChange(patch);
           }}
+          onMove={(patch) => reduceTracking.mutate(patch)}
         />
       )}
       {change && (
         <TrackerPatchReview
           projectId={projectId}
           state={state}
-          patch={change.patch}
-          description={change.description}
+          patch={change}
           onClose={() => setChange(null)}
           onSaved={saved}
         />

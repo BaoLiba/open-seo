@@ -23,6 +23,7 @@ import {
 } from "@/client/components/ui/table";
 import { EngineLabel } from "./EngineLabel";
 import { PromptActionsMenu } from "./PromptActions";
+import { RenameTopicDialog } from "./RenameTopicDialog";
 import { aiRate } from "./shared";
 import type { AiTrackerPatch } from "@/types/schemas/ai-visibility";
 
@@ -53,8 +54,9 @@ export function PromptInventory({
   scheduled: boolean;
   pending: boolean;
   onEdit: (prompt: AiPrompt) => void;
+  /** Saves with no cost review: pause, archive and topic changes add no answers. */
   onReduce: (patch: AiTrackerPatch) => void;
-  onReview: (patch: AiTrackerPatch, description: string) => void;
+  onReview: (patch: AiTrackerPatch) => void;
 }) {
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const [archiving, setArchiving] = useState<{
@@ -62,6 +64,7 @@ export function PromptInventory({
     name: string;
     promptIds: string[];
   } | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
   const matches = (prompt: AiPrompt) =>
     !search ||
     prompt.text.toLocaleLowerCase().includes(search.toLocaleLowerCase());
@@ -142,6 +145,7 @@ export function PromptInventory({
                       paused={paused}
                       scheduled={scheduled}
                       pending={pending}
+                      onEdit={() => setRenaming(topic)}
                       onTogglePause={() => {
                         const patch = {
                           prompts: topicPrompts.map((prompt) => ({
@@ -150,8 +154,7 @@ export function PromptInventory({
                             paused: !paused,
                           })),
                         };
-                        if (paused)
-                          onReview(patch, `Resume prompts in ${topic}.`);
+                        if (paused) onReview(patch);
                         else onReduce(patch);
                       }}
                       onArchive={() =>
@@ -255,11 +258,7 @@ export function PromptInventory({
                                   },
                                 ],
                               };
-                              if (prompt.paused)
-                                onReview(
-                                  patch,
-                                  "Resume this prompt in your tracker.",
-                                );
+                              if (prompt.paused) onReview(patch);
                               else onReduce(patch);
                             }}
                             onArchive={() =>
@@ -279,6 +278,25 @@ export function PromptInventory({
           );
         })}
       </Table>
+      {renaming && (
+        <RenameTopicDialog
+          topic={renaming}
+          onClose={() => setRenaming(null)}
+          onRename={(name) => {
+            // A topic is the name its prompts share, so renaming moves them.
+            onReduce({
+              prompts: prompts
+                .filter((prompt) => prompt.topic === renaming)
+                .map((prompt) => ({
+                  id: prompt.id,
+                  text: prompt.text,
+                  topic: name,
+                })),
+            });
+            setRenaming(null);
+          }}
+        />
+      )}
       {archiving && (
         <ConfirmDialog
           title={`Archive ${archiving.kind}?`}

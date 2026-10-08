@@ -58,7 +58,7 @@ export const aiTrackerPatchSchema = z.object({
         topic: topicSchema
           .optional()
           .describe(
-            "Topic name that groups the prompt. New prompts default to General; edits keep the saved topic.",
+            "Topic name that groups the prompt. New prompts default to General; edits without a topic keep the saved topic. Set it on an existing prompt to move the prompt; to rename a topic, move every prompt in it.",
           ),
         paused: z.boolean().optional(),
       }),

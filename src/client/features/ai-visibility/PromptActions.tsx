@@ -28,7 +28,7 @@ export function PromptActionsMenu({
       {onEdit && (
         <DropdownMenuItem onClick={onEdit}>
           <Pencil />
-          Edit {kind}
+          {kind === "topic" ? "Rename topic" : "Edit prompt"}
         </DropdownMenuItem>
       )}
       <DropdownMenuItem

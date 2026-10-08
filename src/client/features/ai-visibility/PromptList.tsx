@@ -33,7 +33,7 @@ export function PromptList({
   onSetup: () => void;
   onEdit: (prompt: AiPrompt) => void;
   onReduce: (patch: AiTrackerPatch) => void;
-  onReview: (patch: AiTrackerPatch, description: string) => void;
+  onReview: (patch: AiTrackerPatch) => void;
   reducePending: boolean;
 }) {
   const [search, setSearch] = useState("");
