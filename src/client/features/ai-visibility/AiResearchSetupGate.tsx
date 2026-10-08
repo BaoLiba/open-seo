@@ -1,6 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/client/components/ui/alert";
 import { Button } from "@/client/components/ui/button";
@@ -14,7 +13,10 @@ import type { SaveProjectWebsiteSetup } from "@/types/schemas/projectWebsite";
 import { SkeletonPageContent } from "@/client/components/SkeletonPresets";
 import {
   AiQueryError,
+  aiResearchKeywordsQueryOptions,
   aiResearchSetupQueryOptions,
+  aiRunResultsQueryOptions,
+  aiTrackerQueryOptions,
   aiVisibilityKey,
 } from "./shared";
 
@@ -24,7 +26,7 @@ import {
  * research and the onboarding competitor review when the overview or
  * competitors are missing, otherwise one keyword and prompt generation. The
  * run lives on the server, so leaving or reloading the page finds it again.
- * Both paths end on Prompt Tracking.
+ * Both paths end on the page that started setup.
  */
 export function AiResearchSetupGate({
   projectId,
@@ -34,7 +36,6 @@ export function AiResearchSetupGate({
   children: ReactNode;
 }) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const setupOptions = aiResearchSetupQueryOptions(projectId);
   const setup = useQuery(setupOptions);
   const refresh = () =>
@@ -51,28 +52,53 @@ export function AiResearchSetupGate({
     mutationFn: () => startAiResearchSetup({ data: { projectId } }),
     onSuccess: (data) => queryClient.setQueryData(setupOptions.queryKey, data),
   });
+  // Setup writes the tracker, research keywords and a first run. Load what the
+  // AI visibility pages read before setup reads ready, so the page that
+  // started it doesn't flash what it cached before. A failed load drops that
+  // cache instead, so the page loads it again with its own retry and error.
+  const loadSetupResults = async () => {
+    const tracker = aiTrackerQueryOptions(projectId);
+    const keywords = aiResearchKeywordsQueryOptions(projectId);
+    await Promise.all([
+      queryClient.fetchQuery(tracker).then(
+        ({ recentRuns }) => {
+          const runId = recentRuns[0]?.id;
+          if (runId)
+            return queryClient.prefetchQuery(
+              aiRunResultsQueryOptions(projectId, runId),
+            );
+        },
+        () => queryClient.removeQueries({ queryKey: tracker.queryKey }),
+      ),
+      queryClient
+        .fetchQuery({ ...keywords, staleTime: 0 })
+        .catch(() =>
+          queryClient.removeQueries({ queryKey: keywords.queryKey }),
+        ),
+    ]);
+    await refresh();
+  };
   const save = useMutation({
     mutationFn: (accepted: Omit<SaveProjectWebsiteSetup, "projectId">) =>
       saveProjectWebsiteSetup({ data: { ...accepted, projectId } }),
-    onSuccess: refresh,
+    onSuccess: loadSetupResults,
   });
   const status = setup.data?.status;
-  // Once the setup step settled is seen here, ready lands on the generated
-  // topics and prompts. Keyword generation refreshes AI visibility queries.
-  const settingUp = useRef(false);
+  // Setup that finishes anywhere but this gate's save (a background run,
+  // another tab) holds the progress screen until the results load, as a saved
+  // review keeps its saving state.
+  const [lastStatus, setLastStatus] = useState(status);
+  const [finishing, setFinishing] = useState(false);
+  if (status !== lastStatus) {
+    setLastStatus(status);
+    const done = lastStatus && lastStatus !== "ready" && status === "ready";
+    if (done && !save.isPending) setFinishing(true);
+  }
   useEffect(() => {
-    if (status && status !== "ready") settingUp.current = true;
-    else if (status === "ready" && settingUp.current) {
-      settingUp.current = false;
-      void refresh();
-      void navigate({
-        to: "/p/$projectId/ai-visibility",
-        params: { projectId },
-      });
-    }
-    // refresh and navigate are stable enough; only status transitions matter.
+    if (finishing) void loadSetupResults().finally(() => setFinishing(false));
+    // loadSetupResults only reads projectId, which keys this gate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [finishing]);
   if (setup.isPending) return <SkeletonPageContent />;
   if (setup.isError)
     return (
@@ -83,7 +109,7 @@ export function AiResearchSetupGate({
         }}
       />
     );
-  if (status === "ready") return children;
+  if (status === "ready" && !finishing) return children;
   if (setup.data.review)
     return (
       <div className="grid min-h-[calc(100dvh-8rem)] place-items-center">
@@ -96,7 +122,7 @@ export function AiResearchSetupGate({
         />
       </div>
     );
-  if (status === "running" || start.isPending)
+  if (status === "running" || start.isPending || finishing)
     return (
       <div className="grid min-h-[calc(100dvh-8rem)] place-items-center">
         <WebsiteResearchProgress

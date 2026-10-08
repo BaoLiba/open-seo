@@ -12,6 +12,7 @@ import {
   getAiVisibilityRun,
   getAiVisibilityTracker,
   getAiVisibilityResults,
+  listAiResearchKeywords,
 } from "@/serverFunctions/ai-visibility";
 import type { AiRun } from "@/shared/ai-visibility";
 
@@ -54,6 +55,12 @@ export const aiResearchSetupQueryOptions = (projectId: string) =>
     queryFn: () => getAiResearchSetup({ data: { projectId } }),
     refetchInterval: (query) =>
       query.state.data?.status === "running" ? 3000 : false,
+  });
+
+export const aiResearchKeywordsQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: [...aiVisibilityKey(projectId), "researchKeywords"],
+    queryFn: () => listAiResearchKeywords({ data: { projectId } }),
   });
 
 /** Every answer in a run, so each prompt can show its per-engine result. */

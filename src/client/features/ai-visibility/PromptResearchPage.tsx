@@ -18,11 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/client/components/ui/table";
-import { listAiResearchKeywords } from "@/serverFunctions/ai-visibility";
 import { PromptResearchKeyword } from "./PromptResearchKeyword";
 import {
   AiQueryError,
-  aiVisibilityKey,
+  aiResearchKeywordsQueryOptions,
   useAiVisibilityTracker,
 } from "./shared";
 
@@ -105,10 +104,7 @@ export function PromptResearchPage({
 
 function KeywordList({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
-  const query = useQuery({
-    queryKey: [...aiVisibilityKey(projectId), "researchKeywords"],
-    queryFn: () => listAiResearchKeywords({ data: { projectId } }),
-  });
+  const query = useQuery(aiResearchKeywordsQueryOptions(projectId));
   return (
     <div className="overflow-hidden rounded-lg border bg-card border-border">
       <div className="border-b p-4 border-border">
