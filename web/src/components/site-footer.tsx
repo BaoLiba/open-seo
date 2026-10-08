@@ -44,6 +44,7 @@ export function SiteFooter({ className }: { className?: string }) {
           <div>
             <p className="font-semibold text-neutral-900">Compare</p>
             <div className="mt-2 flex flex-col gap-1.5">
+              <Link to="/openseo-vs-dataforseo">OpenSEO vs DataForSEO</Link>
               <Link to="/semrush-alternative">Semrush alternative</Link>
               <Link to="/semrush-pricing">Semrush pricing</Link>
               <Link to="/ahrefs-alternative">Ahrefs alternative</Link>
